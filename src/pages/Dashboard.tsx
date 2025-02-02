@@ -1,59 +1,77 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { DataTable } from "../components/DataTable";
 import { FaSync, FaExclamationCircle, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
-interface OpenVpnServerInfo {
-  vpnMode: string;
-  status: string;
-  pingable: boolean;
-  clients: number;
-  totalBytesIn: number;
-  totalBytesOut: number;
-  upSince: string;
-  localIpAddress: string;
+interface OpenVpnState {
+  upSince: string; 
+  connected: boolean;
+  success: boolean;
+  localIp: string;
+  remoteIp: string;
 }
 
-interface OpenVpnUserStatistic {
+interface OpenVpnSummaryStats {
+  clientsCount: number;
+  bytesIn: number;
+  bytesOut: number;
+}
+
+interface ServerInfo {
+  status: string;
+  openVpnState?: OpenVpnState;
+  openVpnSummaryStats?: OpenVpnSummaryStats;
+  version: string;
+}
+
+
+interface ConnectedClient {
   id: number;
+  username: string;
   sessionId: string;
   commonName: string;
-  realAddress: string;
+  remoteIp: string;
+  localIp: string;
   bytesReceived: number;
   bytesSent: number;
   connectedSince: string;
+  country: string;
+  region: string;
+  city: string;
+  latitude: number;
+  longitude: number;
   lastUpdated: string;
 }
 
-interface OpenVpnServerFullInfo {
-  openVpnServerInfo: OpenVpnServerInfo;
-  openVpnUserStatistics: OpenVpnUserStatistic[];
-}
-
 export function Dashboard() {
-  const [serverInfo, setServerInfo] = useState<OpenVpnServerInfo | null>(null);
-  const [servers, setServers] = useState<OpenVpnUserStatistic[]>([]);
+  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
+  const [clients, setClients] = useState<ConnectedClient[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<number>(60);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
-    axios
-      .get<OpenVpnServerFullInfo>("http://localhost:5580/OpenVpnServer/servers")
-      .then((response) => {
-        setTimeout(() => {
-          setServerInfo(response.data.openVpnServerInfo);
-          setServers(response.data.openVpnUserStatistics || []);
-          setError(null);
-          setLoading(false);
-        }, 500); // Добавляем небольшую задержку для плавности
-      })
-      .catch(() => {
-        setError("Failed to fetch data");
-        setLoading(false);
-      });
+    try {
+      const serverResponse = await axios.get<ServerInfo>("http://localhost:5580/OpenVpnServer/GetServerInfo");
+      setServerInfo(serverResponse.data);
+      setError(null);
+    } catch (error) {
+      setError("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
+
+    try {
+      const clientsResponse = await axios.get<ConnectedClient[]>("http://localhost:5580/OpenVpnServer/GetAllConnectedClients");
+      setClients(clientsResponse.data || []);
+      
+      setError(null);
+    } catch (error) {
+      setError("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -65,12 +83,11 @@ export function Dashboard() {
 
   return (
     <div>
-      <h2>VPN Server Overview</h2>
+      <h2>VPN Server:</h2>
 
       {serverInfo && (
         <div className="server-info-container">
           {[
-            { label: "VPN Mode", value: serverInfo.vpnMode },
             {
               label: "Status",
               value: serverInfo.status === "CONNECTED" ? (
@@ -79,12 +96,12 @@ export function Dashboard() {
                 <FaTimesCircle style={{ color: "red" }} />
               ),
             },
-            { label: "Pingable", value: serverInfo.pingable ? "Yes" : "No" },
-            { label: "Clients", value: serverInfo.clients },
-            { label: "Total Bytes In", value: formatBytes(serverInfo.totalBytesIn) },
-            { label: "Total Bytes Out", value: formatBytes(serverInfo.totalBytesOut) },
+            { label: "Clients", value: serverInfo.openVpnSummaryStats?.clientsCount },
+            { label: "Total Bytes In", value: formatBytes(serverInfo.openVpnSummaryStats?.bytesIn) },
+            { label: "Total Bytes Out", value: formatBytes(serverInfo.openVpnSummaryStats?.bytesOut) },
             { label: "Up Since", value: new Date(serverInfo.upSince).toLocaleString() },
             { label: "Local IP Address", value: serverInfo.localIpAddress },
+            // { label: "OpenVPN Version", value: serverInfo.version },
           ].map((item, index) => (
             <div key={index} className="server-info-item fade-in">
               <div className="label">{item.label}</div>
@@ -94,6 +111,8 @@ export function Dashboard() {
           ))}
         </div>
       )}
+
+      <h2>VPN Clients:</h2>
 
       <div className="button-group">
         <button className="btn secondary" onClick={fetchData} disabled={loading}>
@@ -111,30 +130,36 @@ export function Dashboard() {
           <thead>
             <tr>
               <th>ID</th>
+              {/* <th>User Name</th> */}
               <th>Common Name</th>
-              <th>Real Address</th>
+              <th>Remote Address</th>
+              <th>Local Address</th>
               <th>Bytes Received</th>
               <th>Bytes Sent</th>
               <th>Connected Since</th>
+              <th>Country</th>
               <th>Last Updated</th>
             </tr>
           </thead>
           <tbody>
-            {servers.length > 0 ? (
-              servers.map((server) => (
-                <tr key={server.id} className="fade-in">
-                  <td>{server.id}</td>
-                  <td>{server.commonName}</td>
-                  <td>{server.realAddress}</td>
-                  <td>{formatBytes(server.bytesReceived)}</td>
-                  <td>{formatBytes(server.bytesSent)}</td>
-                  <td>{new Date(server.connectedSince).toLocaleString()}</td>
-                  <td>{new Date(server.lastUpdated).toLocaleString()}</td>
+            {clients.length > 0 ? (
+              clients.map((client) => (
+                <tr key={client.id} className="fade-in">
+                  <td>{client.id}</td>
+                  {/* <td>{client.username}</td> */}
+                  <td>{client.commonName}</td>
+                  <td>{client.remoteIp}</td>
+                  <td>{client.localIp}</td>
+                  <td>{formatBytes(client.bytesReceived)}</td>
+                  <td>{formatBytes(client.bytesSent)}</td>
+                  <td>{new Date(client.connectedSince).toLocaleString()}</td>
+                  <td>{client.country} {client.region} {client.city} {client.latitude} {client.longitude}</td>
+                  <td>{new Date(client.lastUpdated).toLocaleString()}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} style={{ textAlign: "center" }}>📭 No data available</td>
+                <td colSpan={14} style={{ textAlign: "center" }}>📭 No connected clients</td>
               </tr>
             )}
           </tbody>
@@ -157,7 +182,11 @@ export function Dashboard() {
   );
 }
 
-const formatBytes = (bytes: number): string => {
+const formatBytes = (bytes?: number): string => {
+  if (bytes === undefined || bytes === null || isNaN(bytes)) {
+    return "0 Bytes";
+  }
+  
   const sizes = ["Bytes", "KiB", "MiB", "GiB", "TiB"];
   let i = 0;
   while (bytes >= 1024 && i < sizes.length - 1) {
@@ -166,5 +195,6 @@ const formatBytes = (bytes: number): string => {
   }
   return `${bytes.toFixed(1)} ${sizes[i]}`;
 };
+
 
 export default Dashboard;
