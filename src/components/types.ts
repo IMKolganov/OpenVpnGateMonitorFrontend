@@ -1,23 +1,15 @@
-export interface OpenVpnState {
+export interface ServerInfo {
+    id: number;
+    sessionId: string;
     upSince: string;
-    connected: boolean;
-    success: boolean;
     localIp: string;
     remoteIp: string;
-  }
-  
-  export interface OpenVpnSummaryStats {
-    clientsCount: number;
     bytesIn: number;
     bytesOut: number;
-  }
-  
-  export interface ServerInfo {
-    status: string;
-    openVpnState?: OpenVpnState;
-    openVpnSummaryStats?: OpenVpnSummaryStats;
     version: string;
-  }
+    lastUpdate: string;
+    createDate: string;
+  }  
   
   export interface ConnectedClient {
     id: number;

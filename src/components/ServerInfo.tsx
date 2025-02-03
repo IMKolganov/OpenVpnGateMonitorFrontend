@@ -13,23 +13,22 @@ const ServerInfoComponent: React.FC<ServerInfoProps> = ({ serverInfo }) => {
   const infoItems = [
     {
       label: "Status",
-      value: serverInfo.status === "CONNECTED" ? (
+      value: serverInfo.sessionId ? (
         <FaCheckCircle style={{ color: "green" }} />
       ) : (
         <FaTimesCircle style={{ color: "red" }} />
       ),
     },
-    { label: "Clients", value: serverInfo.openVpnSummaryStats?.clientsCount ?? 0 },
-    { label: "Total Bytes In", value: formatBytes(serverInfo.openVpnSummaryStats?.bytesIn ?? 0) },
-    { label: "Total Bytes Out", value: formatBytes(serverInfo.openVpnSummaryStats?.bytesOut ?? 0) },
+    { label: "Total Bytes In", value: formatBytes(serverInfo.bytesIn ?? 0) },
+    { label: "Total Bytes Out", value: formatBytes(serverInfo.bytesOut ?? 0) },
     {
       label: "Up Since",
-      value: serverInfo.openVpnState?.upSince
-        ? new Date(serverInfo.openVpnState.upSince).toLocaleString()
+      value: serverInfo.upSince
+        ? new Date(serverInfo.upSince).toLocaleString()
         : "N/A",
     },
-    { label: "Local IP Address", value: serverInfo.openVpnState?.localIp || "N/A" },
-    { label: "Remote IP Address", value: serverInfo.openVpnState?.remoteIp || "N/A" },
+    { label: "Local IP Address", value: serverInfo.localIp || "N/A" },
+    { label: "Remote IP Address", value: serverInfo.remoteIp || "N/A" },
     { label: "OpenVPN Version", value: serverInfo.version || "Unknown" },
   ];
 
