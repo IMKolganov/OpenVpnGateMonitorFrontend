@@ -28,7 +28,6 @@ body, html {
   width: 80%;
 }
 
-/* Таблица */
 .grid-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -45,7 +44,6 @@ body, html {
   font-weight: bold;
 }
 
-/* Таблица */
 .wide-table table {
   width: 100%;
   border-collapse: collapse;
@@ -75,3 +73,32 @@ tr:hover {
   transition: background 0.3s ease-in-out;
 }
 
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-select {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 6px 6px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.dropdown-select:hover {
+  background-color: #161b22;
+  border-color: #8b949e;
+}
+
+.dropdown-select:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+
+.dropdown-select option {
+  background: #0d1117;
+  color: #c9d1d9;
+}
