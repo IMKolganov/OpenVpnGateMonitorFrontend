@@ -8,7 +8,6 @@ interface ClientsTableProps {
   clients: ConnectedClient[];
 }
 
-// Создаём GitHub-стильную тёмную тему
 const githubDarkTheme = createTheme({
   palette: {
     mode: "dark",
@@ -23,7 +22,6 @@ const githubDarkTheme = createTheme({
   },
 });
 
-// Создаём стилизованный DataGrid
 const StyledDataGrid = styled(DataGrid)({
   fontFamily: "monospace",
   border: "none",
@@ -49,15 +47,14 @@ const StyledDataGrid = styled(DataGrid)({
     color: "#c9d1d9",
     borderTop: "1px solid #30363d",
   },
-  // 🎨 Настроенный тёмный скроллбар (фикс двойного скролла)
   "& .MuiDataGrid-root": {
-    overflow: "hidden", // Полностью отключаем внешний скроллбар
+    overflow: "hidden",
   },
   "& .MuiDataGrid-virtualScroller": {
     overflowX: "hidden",
-    overflowY: "auto", // Разрешаем только вертикальный скролл
-    scrollbarWidth: "thin", // Firefox
-    scrollbarColor: "#30363d #0d1117", // Firefox
+    overflowY: "auto",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#30363d #0d1117",
     "&::-webkit-scrollbar": {
       width: "8px",
       height: "8px",
@@ -74,7 +71,7 @@ const StyledDataGrid = styled(DataGrid)({
     },
   },
   "& .MuiDataGrid-scrollbar": {
-    display: "none", // Скрываем ненужный скроллбар
+    display: "none",
   },
 });
 
@@ -92,7 +89,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients }) => {
     bytesSent: formatBytes(client.bytesSent),
     connectedSince: new Date(client.connectedSince).toLocaleString(),
     country: `${client.country}, ${client.region}, ${client.city}`,
-    lastUpdated: new Date(client.lastUpdated).toLocaleString(),
+    // lastUpdated: new Date(client.lastUpdated).toLocaleString(),
   }));
 
   const columns: GridColDef[] = [
@@ -104,7 +101,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients }) => {
     { field: "bytesSent", headerName: "Bytes Sent", flex: 1 },
     { field: "connectedSince", headerName: "Connected Since", flex: 1 },
     { field: "country", headerName: "Country", flex: 1 },
-    { field: "lastUpdated", headerName: "Last Updated", flex: 1 },
+    // { field: "lastUpdated", headerName: "Last Updated", flex: 1 },
   ];
 
   return (
@@ -116,7 +113,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients }) => {
           backgroundColor: "#0d1117",
           padding: "10px",
           borderRadius: "8px",
-          overflow: "hidden", // Полностью убираем второй скроллбар
+          overflow: "hidden",
         }}
       >
         <StyledDataGrid
@@ -128,7 +125,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({ clients }) => {
           }}
           disableColumnFilter
           disableColumnMenu
-          aria-hidden={false} // Убираем aria-hidden
+          aria-hidden={false}
         />
       </div>
     </ThemeProvider>
