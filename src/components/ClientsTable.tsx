@@ -1,51 +1,137 @@
 import React from "react";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { ConnectedClient } from "./types";
 import { formatBytes } from "./utils";
+import { ThemeProvider, createTheme, styled } from "@mui/material/styles";
 
 interface ClientsTableProps {
   clients: ConnectedClient[];
 }
 
+// Создаём GitHub-стильную тёмную тему
+const githubDarkTheme = createTheme({
+  palette: {
+    mode: "dark",
+    background: {
+      default: "#0d1117",
+      paper: "#161b22",
+    },
+    text: {
+      primary: "#c9d1d9",
+      secondary: "#8b949e",
+    },
+  },
+});
+
+// Создаём стилизованный DataGrid
+const StyledDataGrid = styled(DataGrid)({
+  fontFamily: "monospace",
+  border: "none",
+  "& .MuiDataGrid-columnHeaders": {
+    backgroundColor: "#161b22",
+    color: "#c9d1d9",
+    fontSize: "14px",
+    fontWeight: "bold",
+    borderBottom: "1px solid #30363d",
+  },
+  "& .MuiDataGrid-cell": {
+    color: "#c9d1d9",
+    borderBottom: "1px solid #30363d",
+  },
+  "& .MuiDataGrid-row": {
+    backgroundColor: "#0d1117",
+  },
+  "& .MuiDataGrid-row:hover": {
+    backgroundColor: "#21262d",
+  },
+  "& .MuiDataGrid-footerContainer": {
+    backgroundColor: "#161b22",
+    color: "#c9d1d9",
+    borderTop: "1px solid #30363d",
+  },
+  // 🎨 Настроенный тёмный скроллбар (фикс двойного скролла)
+  "& .MuiDataGrid-root": {
+    overflow: "hidden", // Полностью отключаем внешний скроллбар
+  },
+  "& .MuiDataGrid-virtualScroller": {
+    overflowX: "hidden",
+    overflowY: "auto", // Разрешаем только вертикальный скролл
+    scrollbarWidth: "thin", // Firefox
+    scrollbarColor: "#30363d #0d1117", // Firefox
+    "&::-webkit-scrollbar": {
+      width: "8px",
+      height: "8px",
+    },
+    "&::-webkit-scrollbar-track": {
+      backgroundColor: "#0d1117",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: "#30363d",
+      borderRadius: "4px",
+    },
+    "&::-webkit-scrollbar-thumb:hover": {
+      backgroundColor: "#484f58",
+    },
+  },
+  "& .MuiDataGrid-scrollbar": {
+    display: "none", // Скрываем ненужный скроллбар
+  },
+});
+
 const ClientsTable: React.FC<ClientsTableProps> = ({ clients }) => {
+  if (!clients || clients.length === 0) {
+    return <p style={{ textAlign: "center", padding: "20px" }}>📭 No connected clients</p>;
+  }
+
+  const rows = clients.map((client, index) => ({
+    id: client.id || index + 1,
+    commonName: client.commonName,
+    remoteIp: client.remoteIp,
+    localIp: client.localIp,
+    bytesReceived: formatBytes(client.bytesReceived),
+    bytesSent: formatBytes(client.bytesSent),
+    connectedSince: new Date(client.connectedSince).toLocaleString(),
+    country: `${client.country}, ${client.region}, ${client.city}`,
+    lastUpdated: new Date(client.lastUpdated).toLocaleString(),
+  }));
+
+  const columns: GridColDef[] = [
+    { field: "id", headerName: "ID", width: 70 },
+    { field: "commonName", headerName: "Common Name", flex: 1 },
+    { field: "remoteIp", headerName: "Remote Address", flex: 1 },
+    { field: "localIp", headerName: "Local Address", flex: 1 },
+    { field: "bytesReceived", headerName: "Bytes Received", flex: 1 },
+    { field: "bytesSent", headerName: "Bytes Sent", flex: 1 },
+    { field: "connectedSince", headerName: "Connected Since", flex: 1 },
+    { field: "country", headerName: "Country", flex: 1 },
+    { field: "lastUpdated", headerName: "Last Updated", flex: 1 },
+  ];
+
   return (
-    <div style={{ position: "relative" }}>
-      <table border={1} style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Common Name</th>
-            <th>Remote Address</th>
-            <th>Local Address</th>
-            <th>Bytes Received</th>
-            <th>Bytes Sent</th>
-            <th>Connected Since</th>
-            <th>Country</th>
-            <th>Last Updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.length > 0 ? (
-            clients.map((client) => (
-              <tr key={client.id} className="fade-in">
-                <td>{client.id}</td>
-                <td>{client.commonName}</td>
-                <td>{client.remoteIp}</td>
-                <td>{client.localIp}</td>
-                <td>{formatBytes(client.bytesReceived)}</td>
-                <td>{formatBytes(client.bytesSent)}</td>
-                <td>{new Date(client.connectedSince).toLocaleString()}</td>
-                <td>{`${client.country}, ${client.region}, ${client.city}`}</td>
-                <td>{new Date(client.lastUpdated).toLocaleString()}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={9} style={{ textAlign: "center" }}>📭 No connected clients</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <ThemeProvider theme={githubDarkTheme}>
+      <div
+        style={{
+          height: 500,
+          width: "100%",
+          backgroundColor: "#0d1117",
+          padding: "10px",
+          borderRadius: "8px",
+          overflow: "hidden", // Полностью убираем второй скроллбар
+        }}
+      >
+        <StyledDataGrid
+          rows={rows}
+          columns={columns}
+          pageSizeOptions={[5, 10, 20, 100]}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 10 } },
+          }}
+          disableColumnFilter
+          disableColumnMenu
+          aria-hidden={false} // Убираем aria-hidden
+        />
+      </div>
+    </ThemeProvider>
   );
 };
 

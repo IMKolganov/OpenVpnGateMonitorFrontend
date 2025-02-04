@@ -117,10 +117,10 @@ export function Dashboard() {
     <div>
       <h2>VPN Server:</h2>
       <ServerInfoComponent serverInfo={serverInfo} />
-
+      <p>
       <button className="btn secondary" onClick={fetchData} disabled={loading}>
         <FaSync className={`icon ${loading ? "icon-spin" : ""}`} /> Refresh
-      </button>
+      </button></p><br></br>
 
       <h2>VPN Clients:</h2>
       <ClientsTable clients={clients} />
