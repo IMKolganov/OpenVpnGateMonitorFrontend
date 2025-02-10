@@ -7,6 +7,7 @@ export function Header() {
       <div className="logo">🔥 OpenVPN Gate Monitor</div>
       <nav>
         <ul className="nav-links">
+          <li><Link to="/servers">Servers</Link></li>
           <li><Link to="/">Dashboard</Link></li>
           <li><Link to="/history">History</Link></li>
           <li><Link to="/certificates">Certificates</Link></li>          

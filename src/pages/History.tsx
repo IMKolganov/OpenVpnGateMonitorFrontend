@@ -41,7 +41,7 @@ const History: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get<ConnectedClient[]>(`${config.apiBaseUrl}/OpenVpnServer/GetAllHistoryClients`);
+      const response = await axios.get<ConnectedClient[]>(`${config.apiBaseUrl}/OpenVpnServers/GetAllHistoryClients`);
       setClients(response.data);
     } catch (error) {
       console.error("Error fetching history clients", error);
@@ -52,7 +52,7 @@ const History: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="content-wrapper wide-table" style={{ padding: "20px" }}>
       <h2>VPN Connection History</h2>
       <div style={{borderTop: "1px solid #d1d5da",  marginTop: "5px", padding: "5px"}}></div>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>

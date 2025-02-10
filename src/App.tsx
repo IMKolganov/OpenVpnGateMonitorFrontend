@@ -5,6 +5,8 @@ import { Header } from "./components/Header";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import History from "./pages/History";
+import Servers from "./pages/Servers";
+import AddServer from "./pages/AddServer";
 import Certificates from "./pages/Certificates";
 
 import "./App.css";
@@ -15,15 +17,16 @@ function App() {
       <Router>
         <Header />
         <main className="main-content">
-          <div className="content-wrapper wide-table">
+          
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/servers" element={<Servers />} />
+            <Route path="/add-server" element={<AddServer />} />
             <Route path="/history" element={<History />} />
             <Route path="/certificates" element={<Certificates />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>
-          </div>
         </main>
       </Router>
     </div>

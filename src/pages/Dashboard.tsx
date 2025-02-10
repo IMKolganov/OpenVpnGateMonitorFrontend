@@ -83,8 +83,8 @@ export function Dashboard() {
     setLoading(true);
     try {
       const [serverRes, clientsRes] = await Promise.all([
-        axios.get<ServerInfo>(`${config.apiBaseUrl}/OpenVpnServer/GetServerInfo`),
-        axios.get<ConnectedClient[]>(`${config.apiBaseUrl}/OpenVpnServer/GetAllConnectedClients`),
+        axios.get<ServerInfo>(`${config.apiBaseUrl}/OpenVpnServers/GetServerInfo`),
+        axios.get<ConnectedClient[]>(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients`),
       ]);
 
       setServerInfo(serverRes.data);
@@ -105,7 +105,7 @@ export function Dashboard() {
     if (!config) return;
 
     try {
-      await axios.post(`${config.apiBaseUrl}/OpenVpnServer/run-now`);
+      await axios.post(`${config.apiBaseUrl}/OpenVpnServers/run-now`);
       fetchData();
     } catch (error) {
       console.error("Error running service manually", error);
@@ -118,9 +118,9 @@ export function Dashboard() {
   };
 
   return (
-    <div>
+    <div className="content-wrapper wide-table">
       <h2>VPN Server:</h2>
-      <ServerInfoComponent serverInfo={serverInfo} />
+      {/* <ServerInfoComponent serverInfo={serverInfo} /> */}
 
       <h2>VPN Clients:</h2>
       <div style={{borderTop: "1px solid #d1d5da",  marginTop: "5px", padding: "5px"}}></div>
