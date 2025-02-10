@@ -6,7 +6,7 @@ const AddServer: React.FC = () => {
   const navigate = useNavigate();
 
   const [serverData, setServerData] = useState({
-    name: "",
+    ServerName: "",
     ManagementIp: "",
     ManagementPort: "",
     Login: "",
@@ -14,7 +14,7 @@ const AddServer: React.FC = () => {
   });
 
   const [errors, setErrors] = useState({
-    name: "",
+    ServerName: "",
     ManagementIp: "",
     ManagementPort: "",
   });
@@ -26,10 +26,10 @@ const AddServer: React.FC = () => {
 
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { name: "", ManagementIp: "", ManagementPort: "" };
+    const newErrors = { ServerName: "", ManagementIp: "", ManagementPort: "" };
 
-    if (!serverData.name) {
-      newErrors.name = "Server name is required.";
+    if (!serverData.ServerName) {
+      newErrors.ServerName = "Server name is required.";
       isValid = false;
     }
 
@@ -87,14 +87,14 @@ const AddServer: React.FC = () => {
           <label htmlFor="name">Server Name *</label>
           <input
             type="text"
-            id="name"
-            name="name"
-            value={serverData.name}
+            id="ServerName"
+            name="ServerName"
+            value={serverData.ServerName}
             onChange={handleChange}
-            className={errors.name ? "input-error" : ""}
+            className={errors.ServerName ? "input-error" : ""}
             placeholder="Enter server name"
           />
-          {errors.name && <p className="error-message">{errors.name}</p>}
+          {errors.ServerName && <p className="error-message">{errors.ServerName}</p>}
         </div>
 
         <div className="form-group">

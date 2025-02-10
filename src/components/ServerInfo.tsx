@@ -1,29 +1,48 @@
 import React, { useState, useEffect } from "react";
 import "../css/ServerList.css"; // Подключение стилей
 import { FaSyncAlt, FaPlus, FaEdit, FaEye } from "react-icons/fa"; // Иконки
-import { AiFillCheckCircle, AiFillCloseCircle } from "react-icons/ai";
-import { FaServer } from "react-icons/fa";
 import { BsClock, BsHddNetwork } from "react-icons/bs";
 import { IoIosSpeedometer } from "react-icons/io";
 import { RiHardDrive2Line } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"; 
 
-interface Server {
-  id: string;
-  name: string;
-  status: boolean;
+// Интерфейсы API
+interface OpenVpnServer {
+  id: number;
+  serverName: string;
+  managementIp: string;
+  managementPort: number;
+  login: string;
+  password: string;
+  isOnline: boolean;
+  lastUpdate: string;
+  createDate: string;
+}
+
+interface OpenVpnServerStatusLog {
+  id: number;
+  vpnServerId: number;
+  sessionId: string;
   upSince: string;
-  version: string;
   serverLocalIp: string;
   serverRemoteIp: string;
   bytesIn: number;
   bytesOut: number;
+  version: string;
+  lastUpdate: string;
+  createDate: string;
+}
+
+interface OpenVpnServerInfoResponse {
+  openVpnServer: OpenVpnServer;
+  openVpnServerStatusLog?: OpenVpnServerStatusLog | null;
 }
 
 const ServerList: React.FC = () => {
-  const [servers, setServers] = useState<Server[]>([]);
+  const [servers, setServers] = useState<OpenVpnServerInfoResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [config, setConfig] = useState<{ apiBaseUrl: string } | null>(null);
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -51,7 +70,7 @@ const ServerList: React.FC = () => {
     try {
       const response = await fetch(`${config.apiBaseUrl}/OpenVpnServers/GetAllServers`);
       if (!response.ok) throw new Error("Failed to fetch servers");
-      const data = await response.json();
+      const data: OpenVpnServerInfoResponse[] = await response.json();
       setServers(data);
     } catch (error) {
       console.error("Error fetching servers:", error);
@@ -60,19 +79,16 @@ const ServerList: React.FC = () => {
     }
   };
 
-  const handleViewDetails = (id: string) => {
-    // Логика перехода на страницу деталей
-    console.log(`View details for server with ID: ${id}`);
+  const handleViewDetails = (id: number) => {
+    navigate(`/server-details/${id}`);
   };
 
-  const handleEditServer = (id: string) => {
-    // Логика перехода на страницу редактирования
-    console.log(`Edit server with ID: ${id}`);
+  const handleEditServer = (id: number) => {
+    navigate(`/edit-server/${id}`);
   };
-  const navigate = useNavigate(); 
 
   const handleAddServer = () => {
-    navigate("/add-server"); // Переход на страницу добавления сервера
+    navigate("/add-server");
   };  
 
   return (
@@ -89,16 +105,13 @@ const ServerList: React.FC = () => {
       </div>
       <ul className="list">
         {servers.length > 0 ? (
-          servers.map((server) => (
-            <li key={server.id} className="server-item">
+          servers.map(({ openVpnServer, openVpnServerStatusLog }) => (
+            <li key={openVpnServer.id} className="server-item">
               <div className="server-header">
-                <div className="server-icon-container">
-                  <FaServer className="server-icon" />
-                </div>
                 <div className="server-info">
-                  <strong className="server-name">{server.name}</strong>
-                  <div className={`server-status ${server.status ? "status-online" : "status-offline"}`}>
-                    {server.status ? "Online" : "Offline"}
+                  <strong className="server-name">{openVpnServer.serverName}</strong>
+                  <div className={`server-status ${openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
+                    {openVpnServer.isOnline ? "Online" : "Offline"}
                   </div>
                 </div>
               </div>
@@ -106,39 +119,44 @@ const ServerList: React.FC = () => {
                 <div className="detail-row">
                   <BsClock className="detail-icon" />
                   <span className="detail-label">Uptime :</span>
-                  <span>{server.upSince ? new Date(server.upSince).toLocaleString() : "N/A"}</span>
+                  <span>{openVpnServerStatusLog?.upSince ? new Date(openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span>
                 </div>
                 <div className="detail-row">
                   <RiHardDrive2Line className="detail-icon" />
                   <span className="detail-label">Version :</span>
-                  <span>{server.version || "Unknown"}</span>
+                  <span>{openVpnServerStatusLog?.version || "Unknown"}</span>
                 </div>
                 <div className="detail-row">
                   <BsHddNetwork className="detail-icon" />
                   <span className="detail-label">Local IP :</span>
-                  <span>{server.serverLocalIp || "N/A"}</span>
+                  <span>{openVpnServerStatusLog?.serverLocalIp || "N/A"}</span>
                 </div>
                 <div className="detail-row">
                   <BsHddNetwork className="detail-icon" />
                   <span className="detail-label">Remote IP :</span>
-                  <span>{server.serverRemoteIp || "N/A"}</span>
+                  <span>{openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span>
                 </div>
                 <div className="detail-row">
                   <IoIosSpeedometer className="detail-icon" />
                   <span className="detail-label">Traffic IN :</span>
-                  <span>{server.bytesIn} bytes</span>
+                  <span>{openVpnServerStatusLog?.bytesIn?.toLocaleString() || "0"} bytes</span>
                 </div>
                 <div className="detail-row">
                   <IoIosSpeedometer className="detail-icon" />
                   <span className="detail-label">Traffic OUT :</span>
-                  <span>{server.bytesOut} bytes</span>
+                  <span>{openVpnServerStatusLog?.bytesOut?.toLocaleString() || "0"} bytes</span>
+                </div>
+                <div className="detail-row">
+                  <BsHddNetwork className="detail-icon" />
+                  <span className="detail-label">Management :</span>
+                  <span>{openVpnServer.managementIp || "N/A"}:{openVpnServer.managementPort || "N/A"}</span>
                 </div>
               </div>
               <div className="server-actions">
-                <button className="button view-button" onClick={() => handleViewDetails(server.id)}>
+                <button className="button view-button" onClick={() => handleViewDetails(openVpnServer.id)}>
                   <FaEye className="icon" /> View Details
                 </button>
-                <button className="button edit-button" onClick={() => handleEditServer(server.id)}>
+                <button className="button edit-button" onClick={() => handleEditServer(openVpnServer.id)}>
                   <FaEdit className="icon" /> Edit
                 </button>
               </div>
