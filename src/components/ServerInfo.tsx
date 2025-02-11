@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import "../css/ServerList.css";
-import { FaSyncAlt, FaPlus, FaEdit, FaEye } from "react-icons/fa";
+import { FaSyncAlt, FaPlus, FaEdit, FaEye, FaTrash } from "react-icons/fa";
 import { BsClock, BsHddNetwork } from "react-icons/bs";
-import { IoIosSpeedometer } from "react-icons/io";
 import { RiHardDrive2Line } from "react-icons/ri";
-import { useNavigate } from "react-router-dom"; 
+import { IoIosSpeedometer } from "react-icons/io";
+import { useNavigate } from "react-router-dom";
 
 interface OpenVpnServer {
   id: number;
@@ -41,7 +41,7 @@ const ServerList: React.FC = () => {
   const [servers, setServers] = useState<OpenVpnServerInfoResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [config, setConfig] = useState<{ apiBaseUrl: string } | null>(null);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -83,16 +83,43 @@ const ServerList: React.FC = () => {
   };
 
   const handleEditServer = (id: number) => {
-    navigate(`/edit-server/${id}`);
+    navigate(`/servers/edit/${id}`);
   };
 
-  const handleDeleteServer = (id: number) => {
-    navigate(`/delete-server/${id}`);
+  const handleDeleteServer = async (id: number) => {
+    if (!config) return;
+
+    const confirmDelete = window.confirm("Are you sure you want to delete this server?");
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/OpenVpnServers/DeleteServer?vpnServerId=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete server");
+
+      alert("Server deleted successfully!");
+      setServers((prev) => prev.filter((server) => server.openVpnServer.id !== id));
+    } catch (error) {
+      console.error("Error deleting server:", error);
+      alert("Failed to delete server.");
+    }
   };
 
   const handleAddServer = () => {
-    navigate("/add-server");
-  };  
+    navigate("/servers/add");
+  };
+
+  const toHumanReadableSize = (bytes: number): string => {
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    let i = 0;
+    while (bytes >= 1024 && i < sizes.length - 1) {
+      bytes /= 1024;
+      i++;
+    }
+    return `${bytes.toFixed(2)} ${sizes[i]}`;
+  };
 
   return (
     <div>
@@ -106,72 +133,53 @@ const ServerList: React.FC = () => {
           </button>
         </div>
       </div>
-      <ul className="list">
-        {servers.length > 0 ? (
-          servers.map(({ openVpnServer, openVpnServerStatusLog }) => (
-            <li key={openVpnServer.id} className="server-item">
-              <div className="server-header">
-                <div className="server-info">
-                  <strong className="server-name">{openVpnServer.serverName}</strong>
-                  <div className={`server-status ${openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
-                    {openVpnServer.isOnline ? "Online" : "Offline"}
+
+      {loading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading servers...</p>
+        </div>
+      ) : (
+        <ul className="list">
+          {servers.length > 0 ? (
+            servers.map(({ openVpnServer, openVpnServerStatusLog }) => (
+              <li key={openVpnServer.id} className="server-item">
+                <div className="server-header">
+                  <div className="server-info">
+                    <strong className="server-name">{openVpnServer.serverName}</strong>
+                    <div className={`server-status ${openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
+                      {openVpnServer.isOnline ? "Online" : "Offline"}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="server-details">
-                <div className="detail-row">
-                  <BsClock className="detail-icon" />
-                  <span className="detail-label">Uptime :</span>
-                  <span>{openVpnServerStatusLog?.upSince ? new Date(openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span>
+
+                <div className="server-details">
+                  <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{openVpnServerStatusLog?.upSince ? new Date(openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
+                  <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{openVpnServerStatusLog?.version || "Unknown"}</span></div>
+                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
+                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
+                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(openVpnServerStatusLog?.bytesIn || 0)}</span></div>
+                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(openVpnServerStatusLog?.bytesOut || 0)}</span></div>
                 </div>
-                <div className="detail-row">
-                  <RiHardDrive2Line className="detail-icon" />
-                  <span className="detail-label">Version :</span>
-                  <span>{openVpnServerStatusLog?.version || "Unknown"}</span>
+
+                <div className="server-actions">
+                  <button className="btn normal" onClick={() => handleViewDetails(openVpnServer.id)}>
+                    <FaEye className="icon" /> View
+                  </button>
+                  <button className="btn warning" onClick={() => handleEditServer(openVpnServer.id)}>
+                    <FaEdit className="icon" /> Edit
+                  </button>
+                  <button className="btn danger" disabled={openVpnServer.isOnline} onClick={() => handleDeleteServer(openVpnServer.id)}>
+                    <FaTrash className="icon" /> Delete
+                  </button>
                 </div>
-                <div className="detail-row">
-                  <BsHddNetwork className="detail-icon" />
-                  <span className="detail-label">Local IP :</span>
-                  <span>{openVpnServerStatusLog?.serverLocalIp || "N/A"}</span>
-                </div>
-                <div className="detail-row">
-                  <BsHddNetwork className="detail-icon" />
-                  <span className="detail-label">Remote IP :</span>
-                  <span>{openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span>
-                </div>
-                <div className="detail-row">
-                  <IoIosSpeedometer className="detail-icon" />
-                  <span className="detail-label">Traffic IN :</span>
-                  <span>{openVpnServerStatusLog?.bytesIn?.toLocaleString() || "0"} bytes</span>
-                </div>
-                <div className="detail-row">
-                  <IoIosSpeedometer className="detail-icon" />
-                  <span className="detail-label">Traffic OUT :</span>
-                  <span>{openVpnServerStatusLog?.bytesOut?.toLocaleString() || "0"} bytes</span>
-                </div>
-                <div className="detail-row">
-                  <BsHddNetwork className="detail-icon" />
-                  <span className="detail-label">Management :</span>
-                  <span>{openVpnServer.managementIp || "N/A"}:{openVpnServer.managementPort || "N/A"}</span>
-                </div>
-              </div>
-              <div className="server-actions">
-                <button className="btn normal" onClick={() => handleViewDetails(openVpnServer.id)}>
-                  <FaEye className="icon" /> View Details
-                </button>
-                <button className="btn warning" disabled={true} onClick={() => handleEditServer(openVpnServer.id)}>
-                  <FaEdit className="icon" /> Edit
-                </button>
-                <button className="btn danger" disabled={true} onClick={() => handleDeleteServer(openVpnServer.id)}>
-                  <FaEdit className="icon" /> Delete
-                </button>
-              </div>
-            </li>
-          ))
-        ) : (
-          <p className="no-servers">No servers available</p>
-        )}
-      </ul>
+              </li>
+            ))
+          ) : (
+            <p className="no-servers">No servers available</p>
+          )}
+        </ul>
+      )}
     </div>
   );
 };

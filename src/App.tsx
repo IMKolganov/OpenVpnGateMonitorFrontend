@@ -6,7 +6,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import History from "./pages/History";
 import Servers from "./pages/Servers";
-import AddServer from "./pages/AddServer";
+import ServerForm from "./pages/ServerForm";
 import ServerDetails from "./pages/ServerDetails";
 import Certificates from "./pages/Certificates";
 
@@ -23,7 +23,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/servers" element={<Servers />} />
             <Route path="/" element={<Servers />} />
-            <Route path="/add-server" element={<AddServer />} />
+            <Route path="/servers/add" element={<ServerForm />} />
+            <Route path="/servers/edit/:serverId" element={<ServerForm />} />
             <Route path="/server-details/:id" element={<ServerDetails />} />
             <Route path="/history" element={<History />} />
             <Route path="/certificates" element={<Certificates />} />
