@@ -7,6 +7,7 @@ import Contact from "./pages/Contact";
 import History from "./pages/History";
 import Servers from "./pages/Servers";
 import AddServer from "./pages/AddServer";
+import ServerDetails from "./pages/ServerDetails";
 import Certificates from "./pages/Certificates";
 
 import "./App.css";
@@ -19,9 +20,11 @@ function App() {
         <main className="main-content">
           
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/servers" element={<Servers />} />
+            <Route path="/" element={<Servers />} />
             <Route path="/add-server" element={<AddServer />} />
+            <Route path="/server-details/:id" element={<ServerDetails />} />
             <Route path="/history" element={<History />} />
             <Route path="/certificates" element={<Certificates />} />
             <Route path="/about" element={<About />} />

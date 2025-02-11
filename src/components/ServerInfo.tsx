@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import "../css/ServerList.css"; // Подключение стилей
-import { FaSyncAlt, FaPlus, FaEdit, FaEye } from "react-icons/fa"; // Иконки
+import "../css/ServerList.css";
+import { FaSyncAlt, FaPlus, FaEdit, FaEye } from "react-icons/fa";
 import { BsClock, BsHddNetwork } from "react-icons/bs";
 import { IoIosSpeedometer } from "react-icons/io";
 import { RiHardDrive2Line } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"; 
 
-// Интерфейсы API
 interface OpenVpnServer {
   id: number;
   serverName: string;
@@ -87,6 +86,10 @@ const ServerList: React.FC = () => {
     navigate(`/edit-server/${id}`);
   };
 
+  const handleDeleteServer = (id: number) => {
+    navigate(`/delete-server/${id}`);
+  };
+
   const handleAddServer = () => {
     navigate("/add-server");
   };  
@@ -95,10 +98,10 @@ const ServerList: React.FC = () => {
     <div>
       <div className="header-container">
         <div className="action-buttons">
-          <button className="button add-button" onClick={handleAddServer}>
+          <button className="btn primary" onClick={handleAddServer}>
             <FaPlus className="icon" /> Add Server
           </button>
-          <button className="button refresh-button" onClick={fetchData} disabled={loading}>
+          <button className="btn secondary" onClick={fetchData} disabled={loading}>
             <FaSyncAlt className={`icon ${loading ? "icon-spin" : ""}`} /> Refresh
           </button>
         </div>
@@ -153,11 +156,14 @@ const ServerList: React.FC = () => {
                 </div>
               </div>
               <div className="server-actions">
-                <button className="button view-button" onClick={() => handleViewDetails(openVpnServer.id)}>
+                <button className="btn normal" onClick={() => handleViewDetails(openVpnServer.id)}>
                   <FaEye className="icon" /> View Details
                 </button>
-                <button className="button edit-button" onClick={() => handleEditServer(openVpnServer.id)}>
+                <button className="btn warning" disabled={true} onClick={() => handleEditServer(openVpnServer.id)}>
                   <FaEdit className="icon" /> Edit
+                </button>
+                <button className="btn danger" disabled={true} onClick={() => handleDeleteServer(openVpnServer.id)}>
+                  <FaEdit className="icon" /> Delete
                 </button>
               </div>
             </li>

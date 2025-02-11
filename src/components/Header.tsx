@@ -8,9 +8,9 @@ export function Header() {
       <nav>
         <ul className="nav-links">
           <li><Link to="/servers">Servers</Link></li>
-          <li><Link to="/">Dashboard</Link></li>
-          <li><Link to="/history">History</Link></li>
-          <li><Link to="/certificates">Certificates</Link></li>          
+          {/* <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><Link to="/history">History</Link></li> */}
+          {/* <li><Link to="/certificates">Certificates</Link></li>           */}
           <li><Link to="/about">About</Link></li>
           <li><Link to="/contact">Contact</Link></li>
         </ul>
