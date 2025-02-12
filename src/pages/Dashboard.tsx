@@ -83,7 +83,7 @@ export function Dashboard() {
     setLoading(true);
     try {
       const [serverRes, clientsRes] = await Promise.all([
-        axios.get<ServerInfo>(`${config.apiBaseUrl}/OpenVpnServers/GetServerInfo`),
+        axios.get<ServerInfo>(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats`),
         axios.get<ConnectedClient[]>(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients`),
       ]);
 

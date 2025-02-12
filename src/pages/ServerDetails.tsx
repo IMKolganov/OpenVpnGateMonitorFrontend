@@ -51,7 +51,7 @@ export function ServerDetails() {
     try {
       if (isLive) {
         const [serverRes, clientsRes] = await Promise.all([
-          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServer/${id}`),
+          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
           axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
         ]);
 
