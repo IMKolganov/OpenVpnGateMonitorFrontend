@@ -9,23 +9,20 @@
     transition: color 0.3s ease;
   }
   
-  /* Инпут скрыт */
   .square-toggle input {
     display: none;
   }
   
-  /* Контейнер переключателя */
   .toggle-slider {
     position: relative;
     display: inline-block;
     width: 42px;
     height: 24px;
-    background-color: #373d44; /* Более бледный фон */
+    background-color: #373d44;
     border-radius: 6px;
     transition: background 0.3s ease;
   }
   
-  /* Бегунок внутри */
   .toggle-slider::before {
     content: "";
     position: absolute;
@@ -33,28 +30,25 @@
     left: 2px;
     width: 20px;
     height: 20px;
-    background-color: #666b73; /* Бледный серый */
+    background-color: #666b73;
     border-radius: 4px;
     transition: transform 0.3s ease, background-color 0.3s ease;
   }
   
-  /* Активный режим (Live) */
   .square-toggle input:checked + .toggle-slider {
-    background-color: #3fbf64; /* Бледный зелёный */
+    background-color: #3fbf64;
   }
   
-  /* Бегунок при активации */
   .square-toggle input:checked + .toggle-slider::before {
     transform: translateX(18px);
     background-color: #ffffff;
   }
   
-  /* Эффект наведения (теперь бледнее) */
   .square-toggle:hover .toggle-slider {
-    background-color: #444c56; /* Бледный серый при наведении */
+    background-color: #444c56;
   }
   
   .square-toggle input:checked:hover + .toggle-slider {
-    background-color: #4cca78; /* Бледный зелёный при наведении */
+    background-color: #4cca78;
   }
   

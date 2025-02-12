@@ -4,10 +4,10 @@ import "../css/ServerForm.css";
 
 const ServerForm: React.FC = () => {
   const navigate = useNavigate();
-  const { serverId } = useParams<{ serverId?: string }>(); // Получаем ID из URL
+  const { serverId } = useParams<{ serverId?: string }>();
 
   const [serverData, setServerData] = useState({
-    Id: serverId ? parseInt(serverId) : 0, // Устанавливаем ID (0 для нового сервера)
+    Id: serverId ? parseInt(serverId) : 0,
     ServerName: "",
     ManagementIp: "",
     ManagementPort: 1194,
@@ -24,7 +24,6 @@ const ServerForm: React.FC = () => {
     ManagementPort: "",
   });
 
-  // Загружаем данные, если редактируем сервер
   useEffect(() => {
     if (serverId) {
       fetch(`http://localhost:5581/api/OpenVpnServers/GetServer/${serverId}`)
@@ -33,7 +32,7 @@ const ServerForm: React.FC = () => {
           return response.json();
         })
         .then(data => {
-          console.log("Received data:", data); // Дебаг
+          console.log("Received data:", data);
   
           setServerData(prev => ({
             ...prev,
@@ -86,11 +85,11 @@ const ServerForm: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      const isEditing = !!serverId; // Проверяем, редактируем ли мы сервер
+      const isEditing = !!serverId;
       const url = isEditing
         ? `http://localhost:5581/api/OpenVpnServers/UpdateServer`
         : `http://localhost:5581/api/OpenVpnServers/AddServer`;
-      const method = isEditing ? "POST" : "PUT"; // Используем POST для обновления
+      const method = isEditing ? "POST" : "PUT";
 
       const response = await fetch(url, {
         method,

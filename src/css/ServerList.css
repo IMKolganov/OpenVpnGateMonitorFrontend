@@ -1,4 +1,3 @@
-/* Основные стили */
 .page {
     background-color: #0d1117;
     min-height: 100vh;
@@ -30,7 +29,6 @@
     gap: 10px;
   }  
   
-  /* Карточка сервера */
   .server-item {
     background-color: #161b22;
     margin-bottom: 20px;
@@ -38,12 +36,12 @@
     border-radius: 12px;
     border: 1px solid #30363d;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    list-style: none; /* Убираем кружочки от списка */
+    list-style: none;
   }
   
   .server-item:hover {
-    border-color: #58a6ff; /* Подсветка рамки при наведении */
-    box-shadow: 0 4px 8px rgba(88, 166, 255, 0.3); /* Легкая подсветка */
+    border-color: #58a6ff;
+    box-shadow: 0 4px 8px rgba(88, 166, 255, 0.3);
   }
   
   .server-header {
@@ -93,7 +91,6 @@
     color: #f85149;
   }
   
-  /* Детали сервера */
   .server-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -119,7 +116,6 @@
     color: #c9d1d9;
   }
   
-  /* Действия */
   .server-actions {
     margin-top: 20px;
     display: flex;
@@ -170,25 +166,25 @@
     color: #8b949e;
   }
   
-/* Статус сервера */
 .server-status {
     display: inline-block;
-    padding: 6px 12px;
+    padding: 3px 6px;
+    margin: 0px 6px 0px 6px;
     font-size: 12px;
     font-weight: 600;
-    color: #27ae60; /* По умолчанию Online */
-    background-color: rgba(39, 174, 96, 0.1); /* Бледный зеленый фон */
+    color: #27ae60;
+    background-color: rgba(39, 174, 96, 0.1);
     border-radius: 8px;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   
   .status-online {
-    color: #27ae60; /* Зеленый текст */
-    background-color: rgba(39, 174, 96, 0.1); /* Бледный зеленый */
+    color: #27ae60;
+    background-color: rgba(39, 174, 96, 0.1);
   }
   
   .status-offline {
-    color: #e74c3c; /* Красный текст */
-    background-color: rgba(231, 76, 60, 0.1); /* Бледный красный */
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
   }
   

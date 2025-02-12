@@ -6,6 +6,13 @@ import { RiHardDrive2Line } from "react-icons/ri";
 import { IoIosSpeedometer } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
 
+interface OpenVpnServerInfoResponse {
+  openVpnServer: OpenVpnServer;
+  openVpnServerStatusLog?: OpenVpnServerStatusLog | null;
+  totalBytesIn: number;
+  totalBytesOut: number;
+}
+
 interface OpenVpnServer {
   id: number;
   serverName: string;
@@ -142,25 +149,61 @@ const ServerList: React.FC = () => {
       ) : (
         <ul className="list">
           {servers.length > 0 ? (
-            servers.map(({ openVpnServer, openVpnServerStatusLog }) => (
+            servers.map(({ openVpnServer, openVpnServerStatusLog, totalBytesIn, totalBytesOut }) => (
               <li key={openVpnServer.id} className="server-item">
                 <div className="server-header">
                   <div className="server-info">
                     <strong className="server-name">{openVpnServer.serverName}</strong>
-                    <div className={`server-status ${openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
+
+                  </div>
+                  <div className={`server-status ${openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
                       {openVpnServer.isOnline ? "Online" : "Offline"}
                     </div>
-                  </div>
                 </div>
 
                 <div className="server-details">
-                  <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{openVpnServerStatusLog?.upSince ? new Date(openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
-                  <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{openVpnServerStatusLog?.version || "Unknown"}</span></div>
-                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
-                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
-                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(openVpnServerStatusLog?.bytesIn || 0)}</span></div>
-                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(openVpnServerStatusLog?.bytesOut || 0)}</span></div>
+                  <div className="detail-row">
+                    <BsClock className="detail-icon" />
+                    <span className="detail-label">Uptime:</span>
+                    <span>{openVpnServerStatusLog?.upSince ? new Date(openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <RiHardDrive2Line className="detail-icon" />
+                    <span className="detail-label">Version:</span>
+                    <span>{openVpnServerStatusLog?.version || "Unknown"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <BsHddNetwork className="detail-icon" />
+                    <span className="detail-label">Local IP:</span>
+                    <span>{openVpnServerStatusLog?.serverLocalIp || "N/A"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <BsHddNetwork className="detail-icon" />
+                    <span className="detail-label">Remote IP:</span>
+                    <span>{openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <IoIosSpeedometer className="detail-icon" />
+                    <span className="detail-label">Traffic IN (Current):</span>
+                    <span>{toHumanReadableSize(openVpnServerStatusLog?.bytesIn || 0)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <IoIosSpeedometer className="detail-icon" />
+                    <span className="detail-label">Traffic OUT (Current):</span>
+                    <span>{toHumanReadableSize(openVpnServerStatusLog?.bytesOut || 0)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <IoIosSpeedometer className="detail-icon highlight" />
+                    <span className="detail-label">Total Traffic IN:</span>
+                    <span>{toHumanReadableSize(totalBytesIn)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <IoIosSpeedometer className="detail-icon highlight" />
+                    <span className="detail-label">Total Traffic OUT:</span>
+                    <span>{toHumanReadableSize(totalBytesOut)}</span>
+                  </div>
                 </div>
+
 
                 <div className="server-actions">
                   <button className="btn normal" onClick={() => handleViewDetails(openVpnServer.id)}>
