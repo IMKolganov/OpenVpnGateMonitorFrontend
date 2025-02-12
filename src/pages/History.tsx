@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { ConnectedClient } from "../components/types";
+import { ConnectedClient } from "../utils/types";
 import ClientsTable from "../components/ClientsTable";
 import VpnMap from "../components/VpnMap";
 import { FaSync } from "react-icons/fa";

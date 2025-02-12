@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { FaSync, FaSave } from "react-icons/fa";
-import { ServerInfo, ConnectedClient } from "../components/types";
-import ServerInfoComponent from "../components/ServerInfo";
+import { ServerInfo, ConnectedClient } from "../utils/types";
 import ClientsTable from "../components/ClientsTable";
 import VpnMap from "../components/VpnMap";
 import ServiceControls from "../components/ServiceControls";
@@ -119,12 +118,7 @@ export function Dashboard() {
 
   return (
     <div className="content-wrapper wide-table">
-      <h2>VPN Server:</h2>
-      {/* <ServerInfoComponent serverInfo={serverInfo} /> */}
 
-      <h2>VPN Clients:</h2>
-      <div style={{borderTop: "1px solid #d1d5da",  marginTop: "5px", padding: "5px"}}></div>
-      <ClientsTable clients={clients} />
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
         <label>
@@ -145,9 +139,7 @@ export function Dashboard() {
         </button>
       </div>
 
-      <h2>VPN Client Locations:</h2>
-      <div style={{borderTop: "1px solid #d1d5da",  marginTop: "5px", padding: "5px"}}></div>
-      <VpnMap clients={clients} />
+
 
       <NextRefreshTimer nextRefreshTime={nextRefreshTime} onReset={scheduleNextRefresh} />
 
