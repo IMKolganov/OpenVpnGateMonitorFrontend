@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../css/ServerDetails.css";
 import "../css/ServerList.css";
-import { FaSync, FaArrowLeft } from "react-icons/fa";
+import { FaSync, FaArrowLeft, FaKey, FaTerminal } from "react-icons/fa";
 import { BsClock, BsHddNetwork } from "react-icons/bs";
 import { RiHardDrive2Line } from "react-icons/ri";
 import { IoIosSpeedometer } from "react-icons/io";
@@ -86,6 +86,12 @@ export function ServerDetails() {
         </button>
         <button className="btn secondary" onClick={fetchData} disabled={loading}>
           <FaSync className={`icon ${loading ? "icon-spin" : ""}`} /> Refresh
+        </button>
+        <button className="btn secondary" onClick={() => navigate(`/server-details/${id}/certificates`)}>
+          <FaKey className="icon" /> Manage Certificates
+        </button>
+        <button className="btn secondary" onClick={() => navigate(`/server-details/${id}/console`)}>
+          <FaTerminal className="icon" /> OpenVPN Console
         </button>
 
         <label className="square-toggle">

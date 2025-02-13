@@ -7,7 +7,7 @@ export const fetchConfig = async (): Promise<Config> => {
   try {
     const response = await fetch("/config.json");
     const config: Config = await response.json();
-    API_BASE_URL = config.apiBaseUrl; // Обновляем глобальную переменную
+    API_BASE_URL = config.apiBaseUrl;
     return config;
   } catch (error) {
     console.error("Failed to load config:", error);
@@ -15,7 +15,6 @@ export const fetchConfig = async (): Promise<Config> => {
   }
 };
 
-// Грузим конфиг при старте
 fetchConfig();
 
 export const fetchServers = async (): Promise<OpenVpnServerInfoResponse[]> => {
