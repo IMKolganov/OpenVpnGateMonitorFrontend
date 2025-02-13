@@ -41,18 +41,23 @@ export function ServerDetails() {
     try {
       console.log("Loading config...");
       const response = await fetch("/config.json");
+      if (!response.ok) throw new Error(`Failed to fetch config: ${response.status} ${response.statusText}`);
+
       const data: Config = await response.json();
-      setConfig(data);
+      if (!data.apiBaseUrl) throw new Error("Config is missing 'apiBaseUrl'");
+
       console.log("Config loaded:", data);
+      setConfig(data);
     } catch (error) {
       console.error("Failed to load configuration:", error);
-      setError("Failed to load configuration.");
+      setError("Failed to load configuration. Please check the config file.");
     }
   };
 
   const fetchData = async () => {
-    if (!config || !id) {
-      console.warn("fetchData skipped: config or id is missing.");
+    if (!config?.apiBaseUrl || !id) {
+      console.warn("fetchData skipped: missing config or id");
+      setError("Configuration error: API base URL is missing.");
       return;
     }
 
@@ -120,8 +125,9 @@ export function ServerDetails() {
       ) : error ? (
         <div className="error-message">
           <p>{error}</p>
+          <button className="btn secondary" onClick={fetchData}>Retry</button>
         </div>
-      ) : id ? (
+      ) : (
         <>
           {serverInfo?.openVpnServer ? (
             <div className="server-info">
@@ -156,8 +162,6 @@ export function ServerDetails() {
           <h3>VPN Client Locations</h3>
           <VpnMap clients={clients} />
         </>
-      ) : (
-        <p style={{ textAlign: "center", marginTop: "20px", color: "red" }}>Invalid Server ID</p>
       )}
     </div>
   );
