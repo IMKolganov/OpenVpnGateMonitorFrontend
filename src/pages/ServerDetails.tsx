@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../css/ServerDetails.css";
@@ -15,80 +15,54 @@ interface Config {
 }
 
 export function ServerDetails() {
-  const { id = "0" } = useParams<{ id?: string }>(); // Защита от undefined
+  const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [config, setConfig] = useState<Config | null>(null);
   const [isLive, setIsLive] = useState<boolean>(true);
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const hasFetchedData = useRef(false);
 
   useEffect(() => {
-    console.log("🚀 Server ID from URL:", id);
+    console.log("Server ID from URL:", id);
     loadConfig();
   }, []);
 
   useEffect(() => {
-    if (config?.apiBaseUrl && id !== "0" && !hasFetchedData.current) {
+    if (config && id) {
       fetchData();
-      hasFetchedData.current = true;
     }
-  }, [config, id, isLive]);
+  }, [config, isLive, id]);
 
   const loadConfig = async () => {
     try {
-      console.log("📡 Loading config...");
       const response = await fetch("/config.json");
-      if (!response.ok) throw new Error(`Failed to fetch config: ${response.status} ${response.statusText}`);
-
       const data: Config = await response.json();
-      if (!data.apiBaseUrl) throw new Error("Config is missing 'apiBaseUrl'");
-
-      console.log("✅ Config loaded:", data);
       setConfig(data);
     } catch (error) {
-      console.error("❌ Failed to load configuration:", error);
-      setError("Failed to load configuration. Please check the config file.");
+      console.error("Failed to load configuration:", error);
     }
   };
 
   const fetchData = async () => {
-    if (!config?.apiBaseUrl || id === "0") {
-      console.warn("⚠ fetchData skipped: missing config or invalid id");
-      setError("Configuration error: API base URL is missing or invalid server ID.");
-      return;
-    }
-
+    if (!config || !id) return;
     setLoading(true);
-    setError(null);
-    console.log(`🔄 Fetching data for server ID: ${id}`);
 
     try {
-      const [serverRes, clientsRes] = await Promise.allSettled([
-        axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
-        axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
-      ]);
+      if (isLive) {
+        const [serverRes, clientsRes] = await Promise.all([
+          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
+          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
+        ]);
 
-      if (serverRes.status === "fulfilled") {
-        console.log("✅ Server response:", serverRes.value.data);
-        setServerInfo(serverRes.value.data || {});
+        setServerInfo(serverRes.data || {});
+        setClients(clientsRes.data || []);
       } else {
-        console.error("❌ Server request failed:", serverRes.reason);
-        setError("Failed to fetch server data.");
-      }
-
-      if (clientsRes.status === "fulfilled") {
-        console.log("✅ Clients response:", clientsRes.value.data);
-        setClients(clientsRes.value.data || []);
-      } else {
-        console.error("❌ Clients request failed:", clientsRes.reason);
-        setError("Failed to fetch clients data.");
+        const response = await axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllHistoryClients/${id}`);
+        setClients(response.data || []);
       }
     } catch (error) {
-      console.error("❌ Error fetching data:", error);
-      setError("Sorry, something went wrong. Please try again later.");
+      console.error("Error fetching data", error);
     } finally {
       setLoading(false);
     }
@@ -132,34 +106,31 @@ export function ServerDetails() {
           <div className="loading-spinner"></div>
           <p>Loading server details...</p>
         </div>
-      ) : error ? (
-        <div className="error-message">
-          <p>{error}</p>
-          <button className="btn secondary" onClick={fetchData}>Retry</button>
-        </div>
-      ) : (
+      ) : id ? (
         <>
-          {serverInfo?.openVpnServer ? (
+          {serverInfo && serverInfo.openVpnServer ? (
             <div className="server-info">
               <div className="server-header">
-                <div className="server-info">
-                  <strong className="server-name">{serverInfo.openVpnServer.serverName}</strong>
+                  <div className="server-info">
+                    <strong className="server-name">{serverInfo.openVpnServer.serverName}</strong>
+                  </div>
+                  <div className={`server-status ${serverInfo.openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
+                      {serverInfo.openVpnServer.isOnline ? "Online" : "Offline"}
+                    </div>
                 </div>
-                <div className={`server-status ${serverInfo.openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
-                  {serverInfo.openVpnServer.isOnline ? "Online" : "Offline"}
-                </div>
-              </div>
 
               {serverInfo.openVpnServerStatusLog && (
-                <div className="server-details">
-                  <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{serverInfo.openVpnServerStatusLog?.upSince ? new Date(serverInfo.openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
-                  <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{serverInfo.openVpnServerStatusLog?.version || "Unknown"}</span></div>
-                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
-                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
-                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesIn || 0)}</span></div>
-                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesOut || 0)}</span></div>
-                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Session Id:</span><span>{serverInfo.openVpnServerStatusLog?.sessionId || "N/A"}</span></div>
-                </div>
+                <>
+                  <div className="server-details">
+                    <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{serverInfo.openVpnServerStatusLog?.upSince ? new Date(serverInfo.openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
+                    <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{serverInfo.openVpnServerStatusLog?.version || "Unknown"}</span></div>
+                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
+                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
+                    <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesIn || 0)}</span></div>
+                    <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesOut || 0)}</span></div>
+                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Session Id:</span><span>{serverInfo.openVpnServerStatusLog?.sessionId || "N/A"}</span></div>
+                  </div>
+                </>
               )}
             </div>
           ) : (
@@ -172,6 +143,8 @@ export function ServerDetails() {
           <h3>VPN Client Locations</h3>
           <VpnMap clients={clients} />
         </>
+      ) : (
+        <p style={{ textAlign: "center", marginTop: "20px", color: "red" }}>Invalid Server ID</p>
       )}
     </div>
   );
