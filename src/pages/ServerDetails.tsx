@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../css/ServerDetails.css";
@@ -22,6 +22,8 @@ export function ServerDetails() {
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetchedData = useRef(false);
 
   useEffect(() => {
     console.log("Server ID from URL:", id);
@@ -29,40 +31,49 @@ export function ServerDetails() {
   }, []);
 
   useEffect(() => {
-    if (config && id) {
+    if (config && id && !hasFetchedData.current) {
       fetchData();
+      hasFetchedData.current = true;
     }
-  }, [config, isLive, id]);
+  }, [config, id, isLive]);
 
   const loadConfig = async () => {
     try {
+      console.log("Loading config...");
       const response = await fetch("/config.json");
       const data: Config = await response.json();
       setConfig(data);
+      console.log("Config loaded:", data);
     } catch (error) {
       console.error("Failed to load configuration:", error);
+      setError("Failed to load configuration.");
     }
   };
 
   const fetchData = async () => {
-    if (!config || !id) return;
+    if (!config || !id) {
+      console.warn("fetchData skipped: config or id is missing.");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+    console.log(`Fetching data for server ID: ${id}`);
 
     try {
-      if (isLive) {
-        const [serverRes, clientsRes] = await Promise.all([
-          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
-          axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
-        ]);
+      const [serverRes, clientsRes] = await Promise.all([
+        axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
+        axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
+      ]);
 
-        setServerInfo(serverRes.data || {});
-        setClients(clientsRes.data || []);
-      } else {
-        const response = await axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllHistoryClients/${id}`);
-        setClients(response.data || []);
-      }
+      console.log("Server response:", serverRes.data);
+      console.log("Clients response:", clientsRes.data);
+
+      setServerInfo(serverRes.data || {});
+      setClients(clientsRes.data || []);
     } catch (error) {
-      console.error("Error fetching data", error);
+      console.error("Error fetching data:", error);
+      setError("Sorry, something went wrong. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -106,31 +117,33 @@ export function ServerDetails() {
           <div className="loading-spinner"></div>
           <p>Loading server details...</p>
         </div>
+      ) : error ? (
+        <div className="error-message">
+          <p>{error}</p>
+        </div>
       ) : id ? (
         <>
-          {serverInfo && serverInfo.openVpnServer ? (
+          {serverInfo?.openVpnServer ? (
             <div className="server-info">
               <div className="server-header">
-                  <div className="server-info">
-                    <strong className="server-name">{serverInfo.openVpnServer.serverName}</strong>
-                  </div>
-                  <div className={`server-status ${serverInfo.openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
-                      {serverInfo.openVpnServer.isOnline ? "Online" : "Offline"}
-                    </div>
+                <div className="server-info">
+                  <strong className="server-name">{serverInfo.openVpnServer.serverName}</strong>
                 </div>
+                <div className={`server-status ${serverInfo.openVpnServer.isOnline ? "status-online" : "status-offline"}`}>
+                  {serverInfo.openVpnServer.isOnline ? "Online" : "Offline"}
+                </div>
+              </div>
 
               {serverInfo.openVpnServerStatusLog && (
-                <>
-                  <div className="server-details">
-                    <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{serverInfo.openVpnServerStatusLog?.upSince ? new Date(serverInfo.openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
-                    <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{serverInfo.openVpnServerStatusLog?.version || "Unknown"}</span></div>
-                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
-                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
-                    <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesIn || 0)}</span></div>
-                    <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesOut || 0)}</span></div>
-                    <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Session Id:</span><span>{serverInfo.openVpnServerStatusLog?.sessionId || "N/A"}</span></div>
-                  </div>
-                </>
+                <div className="server-details">
+                  <div className="detail-row"><BsClock className="detail-icon" /><span className="detail-label">Uptime:</span><span>{serverInfo.openVpnServerStatusLog?.upSince ? new Date(serverInfo.openVpnServerStatusLog.upSince).toLocaleString() : "N/A"}</span></div>
+                  <div className="detail-row"><RiHardDrive2Line className="detail-icon" /><span className="detail-label">Version:</span><span>{serverInfo.openVpnServerStatusLog?.version || "Unknown"}</span></div>
+                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Local IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverLocalIp || "N/A"}</span></div>
+                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Remote IP:</span><span>{serverInfo.openVpnServerStatusLog?.serverRemoteIp || "N/A"}</span></div>
+                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic IN:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesIn || 0)}</span></div>
+                  <div className="detail-row"><IoIosSpeedometer className="detail-icon" /><span className="detail-label">Traffic OUT:</span><span>{toHumanReadableSize(serverInfo.openVpnServerStatusLog?.bytesOut || 0)}</span></div>
+                  <div className="detail-row"><BsHddNetwork className="detail-icon" /><span className="detail-label">Session Id:</span><span>{serverInfo.openVpnServerStatusLog?.sessionId || "N/A"}</span></div>
+                </div>
               )}
             </div>
           ) : (

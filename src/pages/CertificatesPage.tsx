@@ -24,7 +24,7 @@ interface Certificate {
 }
 
 const CertificatesPage: React.FC = () => {
-  const { vpnServerId } = useParams<{ vpnServerId: string }>(); // Получаем ID сервера из URL
+  const { vpnServerId } = useParams<{ vpnServerId: string }>();
   const [config, setConfig] = useState<Config | null>(null);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
