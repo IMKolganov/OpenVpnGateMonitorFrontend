@@ -15,7 +15,7 @@ interface Config {
 }
 
 export function ServerDetails() {
-  const { id } = useParams<{ id?: string }>();
+  const { id = "0" } = useParams<{ id?: string }>(); // Защита от undefined
   const navigate = useNavigate();
   const [config, setConfig] = useState<Config | null>(null);
   const [isLive, setIsLive] = useState<boolean>(true);
@@ -26,12 +26,12 @@ export function ServerDetails() {
   const hasFetchedData = useRef(false);
 
   useEffect(() => {
-    console.log("Server ID from URL:", id);
+    console.log("🚀 Server ID from URL:", id);
     loadConfig();
   }, []);
 
   useEffect(() => {
-    if (config && id && !hasFetchedData.current) {
+    if (config?.apiBaseUrl && id !== "0" && !hasFetchedData.current) {
       fetchData();
       hasFetchedData.current = true;
     }
@@ -39,45 +39,55 @@ export function ServerDetails() {
 
   const loadConfig = async () => {
     try {
-      console.log("Loading config...");
+      console.log("📡 Loading config...");
       const response = await fetch("/config.json");
       if (!response.ok) throw new Error(`Failed to fetch config: ${response.status} ${response.statusText}`);
 
       const data: Config = await response.json();
       if (!data.apiBaseUrl) throw new Error("Config is missing 'apiBaseUrl'");
 
-      console.log("Config loaded:", data);
+      console.log("✅ Config loaded:", data);
       setConfig(data);
     } catch (error) {
-      console.error("Failed to load configuration:", error);
+      console.error("❌ Failed to load configuration:", error);
       setError("Failed to load configuration. Please check the config file.");
     }
   };
 
   const fetchData = async () => {
-    if (!config?.apiBaseUrl || !id) {
-      console.warn("fetchData skipped: missing config or id");
-      setError("Configuration error: API base URL is missing.");
+    if (!config?.apiBaseUrl || id === "0") {
+      console.warn("⚠ fetchData skipped: missing config or invalid id");
+      setError("Configuration error: API base URL is missing or invalid server ID.");
       return;
     }
 
     setLoading(true);
     setError(null);
-    console.log(`Fetching data for server ID: ${id}`);
+    console.log(`🔄 Fetching data for server ID: ${id}`);
 
     try {
-      const [serverRes, clientsRes] = await Promise.all([
+      const [serverRes, clientsRes] = await Promise.allSettled([
         axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetServerWithStats/${id}`),
         axios.get(`${config.apiBaseUrl}/OpenVpnServers/GetAllConnectedClients/${id}`),
       ]);
 
-      console.log("Server response:", serverRes.data);
-      console.log("Clients response:", clientsRes.data);
+      if (serverRes.status === "fulfilled") {
+        console.log("✅ Server response:", serverRes.value.data);
+        setServerInfo(serverRes.value.data || {});
+      } else {
+        console.error("❌ Server request failed:", serverRes.reason);
+        setError("Failed to fetch server data.");
+      }
 
-      setServerInfo(serverRes.data || {});
-      setClients(clientsRes.data || []);
+      if (clientsRes.status === "fulfilled") {
+        console.log("✅ Clients response:", clientsRes.value.data);
+        setClients(clientsRes.value.data || []);
+      } else {
+        console.error("❌ Clients request failed:", clientsRes.reason);
+        setError("Failed to fetch clients data.");
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("❌ Error fetching data:", error);
       setError("Sorry, something went wrong. Please try again later.");
     } finally {
       setLoading(false);
