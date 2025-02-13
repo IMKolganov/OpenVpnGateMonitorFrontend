@@ -8,7 +8,7 @@ import History from "./pages/History";
 import Servers from "./pages/Servers";
 import ServerForm from "./pages/ServerForm";
 import ServerDetails from "./pages/ServerDetails";
-import Certificates from "./pages/Certificates";
+import CertificatesPage from "./pages/CertificatesPage";
 
 import "./App.css";
 
@@ -26,8 +26,8 @@ function App() {
             <Route path="/servers/add" element={<ServerForm />} />
             <Route path="/servers/edit/:serverId" element={<ServerForm />} />
             <Route path="/server-details/:id" element={<ServerDetails />} />
+            <Route path="/server-details/:vpnServerId/certificates" element={<CertificatesPage />} />
             <Route path="/history" element={<History />} />
-            <Route path="/certificates" element={<Certificates />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>

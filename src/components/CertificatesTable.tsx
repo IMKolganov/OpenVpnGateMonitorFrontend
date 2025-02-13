@@ -1,12 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { GridColDef } from "@mui/x-data-grid";
 import axios from "axios";
-import StyledDataGrid from "../components/TableStyle";
-import CustomThemeProvider from "../components/ThemeProvider";
-
-interface Config {
-  apiBaseUrl: string;
-}
+import StyledDataGrid from "./TableStyle";
+import CustomThemeProvider from "./ThemeProvider";
 
 interface Certificate {
   commonName: string;
@@ -18,58 +14,35 @@ interface Certificate {
 
 interface CertificatesTableProps {
   certificates: Certificate[];
+  vpnServerId: string;
   onRevoke: () => void;
 }
 
-const renderStatus = (status: Certificate["status"]) => {
+const renderStatus = (status: number) => {
   switch (status) {
-    case 0:
-      return "✅ Active";
-    case 1:
-      return "❌ Revoked";
-    case 2:
-      return "⌛ Expired";
-    case 3:
-    default:
-      return "❓ Unknown";
+    case 0: return "✅ Active";
+    case 1: return "❌ Revoked";
+    case 2: return "⌛ Expired";
+    default: return "❓ Unknown";
   }
 };
 
-const CertificatesTable: React.FC<CertificatesTableProps> = ({ certificates, onRevoke }) => {
-  const [config, setConfig] = useState<Config | null>(null);
-
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
-    try {
-      const response = await fetch("/config.json");
-      const data: Config = await response.json();
-      setConfig(data);
-    } catch (error) {
-      console.error("Failed to load configuration:", error);
-    }
-  };
-
+const CertificatesTable: React.FC<CertificatesTableProps> = ({ certificates, vpnServerId, onRevoke }) => {
   const handleRevoke = useCallback(async (commonName: string) => {
-    if (!config) return;
     if (!window.confirm(`Are you sure you want to revoke certificate for ${commonName}?`)) return;
-  
+
     try {
-      await axios.get(`${config.apiBaseUrl}/api/OpenVpnCerts/RemoveCertificate?cnName=${commonName}`);
+      await axios.get(`/api/OpenVpnServerCerts/RevokeCertificate/${vpnServerId}?cnName=${commonName}`);
       onRevoke();
     } catch (error) {
       console.error("Failed to revoke certificate", error);
       alert("Error revoking certificate.");
     }
-  }, [config, onRevoke]);
-  
+  }, [vpnServerId, onRevoke]);
 
   const rows = certificates.map((cert, index) => ({
     id: index + 1,
     commonName: cert.commonName,
-    status: cert.status,
     statusText: renderStatus(cert.status),
     expiryDate: new Date(cert.expiryDate).toLocaleDateString(),
     revokeDate: cert.revokeDate ? new Date(cert.revokeDate).toLocaleDateString() : "—",
@@ -88,24 +61,14 @@ const CertificatesTable: React.FC<CertificatesTableProps> = ({ certificates, onR
       headerName: "Actions",
       width: 150,
       renderCell: (params) => {
-        if (params.row.status !== 0) {
+        if (params.row.statusText !== "✅ Active") {
           return <span style={{ color: "gray" }}>No actions</span>;
         }
 
         return (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-              width: "100%",
-            }}
-          >
-            <button className="btn danger" onClick={() => handleRevoke(params.row.commonName)}>
-              Revoke
-            </button>
-          </div>
+          <button className="btn danger" onClick={() => handleRevoke(params.row.commonName)}>
+            Revoke
+          </button>
         );
       },
     },
@@ -113,19 +76,14 @@ const CertificatesTable: React.FC<CertificatesTableProps> = ({ certificates, onR
 
   return (
     <CustomThemeProvider>
-      <div style={{ width: "100%", backgroundColor: "#0d1117", padding: "10px", borderRadius: "8px" }}>
+      <div className="cert-table-container">
         <StyledDataGrid
           rows={rows}
           columns={columns}
           pageSizeOptions={[5, 10, 20, 100]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 10 } },
-          }}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableColumnFilter
           disableColumnMenu
-          localeText={{
-            noRowsLabel: "📭 No certificates found",
-          }}
         />
       </div>
     </CustomThemeProvider>
