@@ -8,7 +8,7 @@ import History from "./pages/History";
 import Servers from "./pages/Servers";
 import ServerForm from "./pages/ServerForm";
 import ServerDetails from "./pages/ServerDetails";
-import Certificates from "./pages/Certificates";
+import CertificatesPage from "./pages/CertificatesPage";
 
 import "./App.css";
 
