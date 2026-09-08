@@ -2,7 +2,7 @@
   display: inline-block;
   width: 100%;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--input-text);
   background-color: var(--input-bg);

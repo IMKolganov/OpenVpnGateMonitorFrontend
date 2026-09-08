@@ -4,7 +4,16 @@ import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../test/renderWithProviders";
 
 vi.mock("../components/servers/ServerList.tsx", () => ({
-  default: () => <div data-testid="server-list">ServerList</div>,
+  default: ({ onHideList }: { onHideList?: () => void }) => (
+    <div data-testid="server-list">
+      ServerList
+      {onHideList ? (
+        <button type="button" onClick={onHideList} aria-label="Hide servers">
+          Hide servers
+        </button>
+      ) : null}
+    </div>
+  ),
 }));
 
 const mediaQuery = vi.fn((_q?: { maxWidth?: number }) => false);
@@ -31,7 +40,7 @@ describe("ServersWithDetails", () => {
 
     expect(screen.getByTestId("server-list")).toBeInTheDocument();
     expect(screen.getByText("Overview outlet")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "⬅" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide servers" })).toBeInTheDocument();
   });
 
   it("shows mobile Servers/Overview tablist on servers index", () => {

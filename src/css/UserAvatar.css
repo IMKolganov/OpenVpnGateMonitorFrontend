@@ -7,7 +7,7 @@
   flex-shrink: 0;
   width: var(--avatar-size, 32px);
   height: var(--avatar-size, 32px);
-  font-size: var(--avatar-font-size, 12px);
+  font-size: var(--avatar-font-size, var(--font-size-sm));
   border-radius: 50%;
   overflow: hidden;
   font-weight: 600;

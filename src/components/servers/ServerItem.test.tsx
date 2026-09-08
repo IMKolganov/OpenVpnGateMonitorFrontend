@@ -56,7 +56,8 @@ describe("ServerItem", () => {
 
     expect(screen.getByText(/\(12\) Edge-12/)).toBeInTheDocument();
     expect(screen.getByText(/Online/i)).toBeInTheDocument();
-    expect(screen.getByText(/Status Name: Running/i)).toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
+    expect(screen.getByText("Running")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /View/i }));
     await user.click(screen.getByRole("button", { name: /Edit/i }));

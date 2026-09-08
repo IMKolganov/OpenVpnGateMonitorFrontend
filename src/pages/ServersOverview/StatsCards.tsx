@@ -50,8 +50,8 @@ function Card({ title, value }: { title: string; value: string | number }) {
         gap: 4,
       }}
     >
-      <div style={{ fontSize: 12, opacity: 0.7 }}>{title}</div>
-      <div style={{ fontWeight: 700, fontSize: 18, wordBreak: "break-word" }}>
+      <div style={{ fontSize: "var(--font-size-sm)", opacity: 0.7 }}>{title}</div>
+      <div style={{ fontWeight: 700, fontSize: "var(--font-size-xl)", wordBreak: "break-word" }}>
         {value}
       </div>
     </div>

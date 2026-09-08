@@ -4,11 +4,14 @@ import {
     FaEdit,
     FaTrash,
     FaPlayCircle,
-    FaPauseCircle,
     FaTimesCircle,
+    FaUser,
+    FaLink,
+    FaGlobe,
+    FaStar,
+    FaClock,
+    FaTag,
 } from "react-icons/fa";
-import { BsClock, BsFillBookmarkStarFill, BsTag, BsLink45Deg, BsHddNetwork } from "react-icons/bs";
-import { IoMdPerson } from "react-icons/io";
 import type {
     ServiceStatus,
     VpnServerV2Dto,
@@ -18,6 +21,7 @@ import type {
 import { getCurrentUser, isAdmin } from "../../utils/auth/authSelectors";
 import { vpnServerTypeLabel } from "../../constants/vpnServerType";
 import { VpnStackLogo } from "./VpnStackLogo";
+import { UNGROUPED_GROUP_ID, type GroupAssignTarget } from "../../utils/serverGroups";
 
 interface Props {
     /** v2 includes quota plan groups and accessibility; v1 kept for detail pages still on legacy GET. */
@@ -37,6 +41,9 @@ interface Props {
     onView: (id: number) => void;
     onEdit: (id: number) => void;
     onDelete: (id: number) => void;
+    groups?: { id: number; name: string }[];
+    currentGroupId?: number | null;
+    onAssignGroup?: (serverId: number, target: GroupAssignTarget) => void;
 }
 
 const formatUtcDate = (utc: string | null | undefined) => {
@@ -54,41 +61,32 @@ const formatUtcDate = (utc: string | null | undefined) => {
     }
 };
 
-const getStatusLabel = (status: ServiceStatus | null) => {
-    if (status === null) {
-        return (
-            <span className="status-indicator idle" title="Waiting for live status from the background service">
-                <BsClock className="status-icon" /> Service status: …
-            </span>
-        );
+const statusIcon = (status: ServiceStatus | null) => {
+    if (status === null || Number(status) === 0) {
+        return <FaClock className="detail-icon" aria-hidden />;
     }
+    if (Number(status) === 1) {
+        return <FaPlayCircle className="detail-icon" aria-hidden />;
+    }
+    return <FaTimesCircle className="detail-icon" aria-hidden />;
+};
+
+const statusTone = (status: ServiceStatus | null) => {
+    if (status === null) return "idle";
     const s = Number(status);
-    if (s === 1) {
-        return (
-            <span className="status-indicator running">
-        <FaPlayCircle className="status-icon" /> Status Name: Running
-      </span>
-        );
-    }
-    if (s === 0) {
-        return (
-            <span className="status-indicator idle">
-        <FaPauseCircle className="status-icon" /> Status Name: Idle
-      </span>
-        );
-    }
-    if (s === 2) {
-        return (
-            <span className="status-indicator error">
-        <FaTimesCircle className="status-icon" /> Status Name: Error
-      </span>
-        );
-    }
-    return (
-        <span className="status-indicator unknown">
-      <FaTimesCircle className="status-icon" /> Status Name: ❓ Unknown
-    </span>
-    );
+    if (s === 1) return "running";
+    if (s === 0) return "idle";
+    if (s === 2) return "error";
+    return "unknown";
+};
+
+const statusValue = (status: ServiceStatus | null) => {
+    if (status === null) return "…";
+    const s = Number(status);
+    if (s === 1) return "Running";
+    if (s === 0) return "Idle";
+    if (s === 2) return "Error";
+    return "Unknown";
 };
 
 const ServerItem: React.FC<Props> = ({
@@ -103,6 +101,9 @@ const ServerItem: React.FC<Props> = ({
                                          onView,
                                          onEdit,
                                          onDelete,
+                                         groups = [],
+                                         currentGroupId = null,
+                                         onAssignGroup,
                                      }) => {
     const user = getCurrentUser();
     const canManage = isAdmin(user);
@@ -138,6 +139,9 @@ const ServerItem: React.FC<Props> = ({
                 <div className="server-info">
                     <strong className="server-name">
                         ({vpnServerId !== 0 ? vpnServerId : resolvedId}) {name}
+                        <span className="server-connected-count" title="Connected clients">
+                            ({connectedClients})
+                        </span>
                         <span
                             style={{
                                 marginLeft: 8,
@@ -179,7 +183,7 @@ const ServerItem: React.FC<Props> = ({
                         </div>
                     )}
                     {accessibleByQuotaPlan === false && !canManage && (
-                        <div style={{ marginTop: 4, fontSize: 11, color: "#f85149" }}>
+                        <div className="server-quota-restricted">
                             Not included in your quota plan (view only).
                         </div>
                     )}
@@ -192,6 +196,29 @@ const ServerItem: React.FC<Props> = ({
                     {isOnline ? "✅ Online" : "❌ Offline"}
                 </div>
             </div>
+            {canManage && onAssignGroup && (
+                <label className="server-group-assign" onClick={(e) => e.stopPropagation()}>
+                    <span className="server-group-assign__label">Group</span>
+                    <select
+                        className="input"
+                        value={currentGroupId != null ? String(currentGroupId) : UNGROUPED_GROUP_ID}
+                        aria-label="Move to group"
+                        onChange={(e) => {
+                            const raw = e.target.value;
+                            const target: GroupAssignTarget =
+                                raw === UNGROUPED_GROUP_ID ? UNGROUPED_GROUP_ID : Number(raw);
+                            onAssignGroup(resolvedId, target);
+                        }}
+                    >
+                        <option value={UNGROUPED_GROUP_ID}>Ungrouped</option>
+                        {groups.map((g) => (
+                            <option key={g.id} value={String(g.id)}>
+                                {g.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            )}
             {isCurrentUserConnected ? (
                 <div className="server-self-connected-note">
                     You are currently connected to this server.
@@ -200,76 +227,75 @@ const ServerItem: React.FC<Props> = ({
 
             <div className="server-details">
                 <div className="detail-row">
-                    <IoMdPerson className="detail-icon" aria-hidden />
-                    <div className="detail-row-main">
-                        <span className="detail-label">Count Connected Clients:</span>
-                        <span className="detail-value">{connectedClients}</span>
-                    </div>
+                    <FaUser className="detail-icon" aria-hidden />
+                    <span className="detail-label">Clients</span>
+                    <span className="detail-value">{connectedClients}</span>
                 </div>
 
                 {apiUrl && (
                     <div className="detail-row">
-                        <BsLink45Deg className="detail-icon" aria-hidden />
-                        <div className="detail-row-main">
-                            <span className="detail-label">API:</span>
-                            <a href={apiUrl} target="_blank" rel="noreferrer" className="detail-link" onClick={(e) => e.stopPropagation()}>
-                                {apiUrl}
-                            </a>
-                        </div>
+                        <FaLink className="detail-icon" aria-hidden />
+                        <span className="detail-label">API</span>
+                        <a href={apiUrl} target="_blank" rel="noreferrer" className="detail-link" onClick={(e) => e.stopPropagation()}>
+                            {apiUrl}
+                        </a>
                     </div>
                 )}
 
                 {serverIp && (
                     <div className="detail-row">
-                        <BsHddNetwork className="detail-icon" aria-hidden />
-                        <div className="detail-row-main">
-                            <span className="detail-label">IP:</span>
-                            <span className="detail-value">{serverIp}</span>
-                        </div>
+                        <FaGlobe className="detail-icon" aria-hidden />
+                        <span className="detail-label">IP</span>
+                        <span className="detail-value">{serverIp}</span>
                     </div>
                 )}
 
                 {isDefault && (
-                    <div className="detail-row">
-                        <BsFillBookmarkStarFill className="detail-icon" aria-hidden />
-                        <div className="detail-row-main">
-                            <span className="detail-label">Default server</span>
-                        </div>
+                    <div className="detail-row detail-row--flag">
+                        <FaStar className="detail-icon" aria-hidden />
+                        <span className="detail-label">Default server</span>
                     </div>
                 )}
-            </div>
 
-            <div className="server-service">
-                <div className="detail-row detail-row--status">{getStatusLabel(serviceStatus)}</div>
                 <div className="detail-row">
-                    <BsClock className="detail-icon" aria-hidden />
-                    <div className="detail-row-main">
-                        <span className="detail-label">Next Run Time:</span>
-                        <span className="detail-value">{formatUtcDate(nextRunTime)}</span>
-                    </div>
+                    {statusIcon(serviceStatus)}
+                    <span className="detail-label">Status</span>
+                    <span
+                        className={`detail-value status-indicator ${statusTone(serviceStatus)}`}
+                        title={
+                            serviceStatus === null
+                                ? "Waiting for live status from the background service"
+                                : undefined
+                        }
+                    >
+                        {statusValue(serviceStatus)}
+                    </span>
+                </div>
+                <div className="detail-row">
+                    <FaClock className="detail-icon" aria-hidden />
+                    <span className="detail-label">Next run</span>
+                    <span className="detail-value">{formatUtcDate(nextRunTime)}</span>
                 </div>
                 {errorMessage && (
                     <div className="error-message">
                         <strong>⚠ Error:</strong> {errorMessage}
                     </div>
                 )}
-            </div>
 
-            {Array.isArray(vpnServer?.tags) && vpnServer.tags.length > 0 && (
-                <div className="server-tags-block">
-                    <div className="detail-row-tags-heading">
-                        <BsTag className="detail-icon" />
-                        <span className="detail-label">Tags:</span>
+                {Array.isArray(vpnServer?.tags) && vpnServer.tags.length > 0 && (
+                    <div className="detail-row">
+                        <FaTag className="detail-icon" aria-hidden />
+                        <span className="detail-label">Tags</span>
+                        <span className="server-tags-list">
+                            {vpnServer.tags.map((tag) => (
+                                <span key={tag} className="server-tag-pill">
+                                    {tag}
+                                </span>
+                            ))}
+                        </span>
                     </div>
-                    <span className="server-tags-list">
-                        {vpnServer.tags.map((tag) => (
-                            <span key={tag} className="server-tag-pill">
-                                {tag}
-                            </span>
-                        ))}
-                    </span>
-                </div>
-            )}
+                )}
+            </div>
 
             <div className="server-actions">
                 <div className="server-actions-buttons">

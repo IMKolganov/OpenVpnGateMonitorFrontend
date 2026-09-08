@@ -11,7 +11,7 @@
 
 .grid-filter-bar__hint {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
 
@@ -39,7 +39,7 @@
 }
 
 .grid-filter-bar__label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.02em;

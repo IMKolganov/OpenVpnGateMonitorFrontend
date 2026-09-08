@@ -60,7 +60,7 @@
     align-items: center;
     gap: 8px;
     margin: 0.75rem 0 0.5rem 0;
-    font-size: 0.95rem;
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--text-secondary);
   }
@@ -76,12 +76,12 @@
 
   .certificates-page .certificates-page__section h3.settings-card__h3-with-icon {
     margin: 0 0 12px 0;
-    font-size: 1.05rem;
+    font-size: var(--font-size-lg);
     color: var(--text-primary);
   }
 
   .certificate-description {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     color: #b0b0b0;
     margin-bottom: 15px;
   }
