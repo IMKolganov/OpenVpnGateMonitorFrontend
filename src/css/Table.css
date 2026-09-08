@@ -37,7 +37,7 @@
 
 /* Notifications: severity as colored text (left border stays for row accent) */
 .notification-severity-badge {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -100,7 +100,7 @@
 .notification-details-btn {
   flex-shrink: 0;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .notification-details-modal .notification-details-body {
@@ -130,7 +130,7 @@
   align-items: flex-start;
   gap: 0.5rem;
   margin: 0 0 0.75rem 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.35;
@@ -165,7 +165,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--font-size-md);
   line-height: 1.5;
   color: var(--text-primary);
 }

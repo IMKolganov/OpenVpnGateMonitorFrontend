@@ -15,11 +15,11 @@
 .group-details-hint {
   margin: -8px 0 16px;
   opacity: 0.75;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .group-details-saving {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   opacity: 0.8;
 }
 
@@ -31,7 +31,7 @@
 .group-details-rename label {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   opacity: 0.9;
 }
 
@@ -70,7 +70,7 @@
 
 .group-details-section h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-lg);
 }
 
 .group-details-sortable-list {
@@ -193,14 +193,14 @@
 }
 
 .group-details-available-group {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   opacity: 0.75;
 }
 
 .group-details-empty {
   margin: 0;
   opacity: 0.75;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .btn.danger {

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type {} from "@mui/x-data-grid/themeAugmentation";
 import { useTheme } from "../../contexts/useTheme";
 import { fontSans } from "../../theme/fonts";
+import { fontSizeBasePx } from "../../theme/typography";
 
 const darkPalette = {
   mode: "dark" as const,
@@ -56,7 +57,7 @@ function getAppTheme(mode: "light" | "dark") {
   return createTheme({
     typography: {
       fontFamily: fontSans,
-      fontSize: 14,
+      fontSize: fontSizeBasePx,
     },
     palette: {
       mode: data.mode,

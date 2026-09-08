@@ -1,4 +1,4 @@
-/** Keep in sync with --font-sans / --font-mono in index.css */
+/** Keep in sync with --font-sans / --font-mono in src/css/tokens.css */
 export const fontSans = 'Arial, Helvetica, sans-serif';
 
 export const fontMono =

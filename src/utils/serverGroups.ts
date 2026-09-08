@@ -27,6 +27,24 @@ export function saveCollapsedGroups(map: CollapsedGroupsMap): void {
   }
 }
 
+const DETAILS_HIDDEN_STORAGE_KEY = "datagate.serverList.detailsHidden";
+
+export function loadServerDetailsHidden(): boolean {
+  try {
+    return localStorage.getItem(DETAILS_HIDDEN_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function saveServerDetailsHidden(hidden: boolean): void {
+  try {
+    localStorage.setItem(DETAILS_HIDDEN_STORAGE_KEY, hidden ? "1" : "0");
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export type GroupableServer = {
   id: number;
   groupId?: number | null;

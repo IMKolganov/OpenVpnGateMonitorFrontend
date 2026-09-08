@@ -20,7 +20,7 @@
 
 .text-muted-sm {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-md);
   margin-top: 8px;
   margin-bottom: 0;
 }
@@ -126,7 +126,7 @@ select.input {
   width: auto;
   min-width: 0;
   padding: 8px 10px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--input-text);
   background-color: var(--input-bg);
@@ -247,19 +247,19 @@ select.input:focus {
 }
 
 .inline-check-label__text {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   opacity: 0.85;
 }
 
 .hint-line {
-  font-size: 13px;
+  font-size: var(--font-size-md);
   opacity: 0.92;
   margin: 0 0 12px;
   line-height: 1.45;
 }
 
 .hint-line--sm {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   opacity: 0.7;
 }
 
@@ -322,7 +322,7 @@ select.input:focus {
 }
 
 .admin-session-row__since {
-  font-size: 0.9em;
+  font-size: var(--font-size-md);
   opacity: 0.75;
   margin-top: 4px;
 }

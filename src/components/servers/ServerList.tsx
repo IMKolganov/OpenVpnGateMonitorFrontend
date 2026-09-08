@@ -1,7 +1,7 @@
 // src/components/ServerList.tsx
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FaSyncAlt, FaPlus, FaFolderPlus, FaExpand, FaCompress } from "react-icons/fa";
+import { FaSyncAlt, FaPlus, FaFolderPlus, FaExpand, FaCompress, FaChevronLeft, FaList, FaThList } from "react-icons/fa";
 import { useNavigate, useLocation, useMatch } from "react-router-dom";
 import { useMediaQuery } from "react-responsive";
 import { toast } from "react-toastify";
@@ -18,6 +18,8 @@ import {
   buildServerGroupSections,
   loadCollapsedGroups,
   saveCollapsedGroups,
+  loadServerDetailsHidden,
+  saveServerDetailsHidden,
   type CollapsedGroupsMap,
 } from "../../utils/serverGroups";
 
@@ -138,7 +140,11 @@ function readApiIsOnline(item: OrvalServerItem): boolean {
   return Boolean(vpn?.isOnline);
 }
 
-const ServerList: React.FC = () => {
+type ServerListProps = {
+  onHideList?: () => void;
+};
+
+const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
   const queryClient = useQueryClient();
 
   const user = getCurrentUser();
@@ -159,6 +165,7 @@ const ServerList: React.FC = () => {
   const selectedServerId = match ? Number.parseInt(match[1], 10) : null;
 
   const [collapsedMap, setCollapsedMap] = useState<CollapsedGroupsMap>(() => loadCollapsedGroups());
+  const [detailsHidden, setDetailsHidden] = useState(() => loadServerDetailsHidden());
 
   const {
     data: baseServers = [],
@@ -294,6 +301,14 @@ const ServerList: React.FC = () => {
     });
   };
 
+  const toggleDetailsHidden = () => {
+    setDetailsHidden((prev) => {
+      const next = !prev;
+      saveServerDetailsHidden(next);
+      return next;
+    });
+  };
+
   const addGroup = async () => {
     const name = window.prompt("New group name");
     if (!name?.trim()) return;
@@ -365,7 +380,7 @@ const ServerList: React.FC = () => {
       key={server.id}
       className={`server-item clickable ${selectedServerId === server.id ? "selected" : ""}${
         serverRowIsDisabled(server.raw) ? " server-item--polling-off" : ""
-      }`}
+      }${detailsHidden ? " server-item--compact" : ""}`}
       onClick={() =>
         navigate(buildServerSwitchPath(server.id, location.pathname, canAddServer))
       }
@@ -393,6 +408,20 @@ const ServerList: React.FC = () => {
 
   return (
       <div>
+        {onHideList && (
+          <div className="server-list-hide-row">
+            <button
+              type="button"
+              className="btn secondary server-list-hide-btn"
+              onClick={onHideList}
+              title="Hide server list"
+              aria-label="Hide server list"
+            >
+              <span className="icon">{FaChevronLeft({ className: "icon" })}</span>
+              Hide servers
+            </button>
+          </div>
+        )}
         <div className="header-container">
           <div className="header-bar">
             <div className="left-buttons">
@@ -428,28 +457,42 @@ const ServerList: React.FC = () => {
                 <span className="server-list-count">
                   {servers.length} {servers.length === 1 ? "server" : "servers"}
                 </span>
-                {sections.length > 0 && (
-                  <div className="server-groups-toolbar" role="group" aria-label="Group expand controls">
-                    <button
-                      type="button"
-                      className="server-groups-toolbar__btn"
-                      onClick={expandAllGroups}
-                      title="Expand all"
-                      aria-label="Expand all groups"
-                    >
-                      {FaExpand({ className: "icon" })}
-                    </button>
-                    <button
-                      type="button"
-                      className="server-groups-toolbar__btn"
-                      onClick={collapseAllGroups}
-                      title="Collapse all"
-                      aria-label="Collapse all groups"
-                    >
-                      {FaCompress({ className: "icon" })}
-                    </button>
-                  </div>
-                )}
+                <div className="server-groups-toolbar" role="group" aria-label="List view controls">
+                  {sections.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        className="server-groups-toolbar__btn"
+                        onClick={expandAllGroups}
+                        title="Expand all groups"
+                        aria-label="Expand all groups"
+                      >
+                        {FaExpand({ className: "icon" })}
+                      </button>
+                      <button
+                        type="button"
+                        className="server-groups-toolbar__btn"
+                        onClick={collapseAllGroups}
+                        title="Collapse all groups"
+                        aria-label="Collapse all groups"
+                      >
+                        {FaCompress({ className: "icon" })}
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    className={`server-groups-toolbar__btn${detailsHidden ? " is-active" : ""}`}
+                    onClick={toggleDetailsHidden}
+                    title={detailsHidden ? "Show server details" : "Compact list — names and status only"}
+                    aria-label={detailsHidden ? "Show server details" : "Hide server details"}
+                    aria-pressed={detailsHidden}
+                  >
+                    {detailsHidden
+                      ? FaThList({ className: "icon" })
+                      : FaList({ className: "icon" })}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -480,10 +523,9 @@ const ServerList: React.FC = () => {
                         <span className="skeleton skeleton--w100-h14" />
                       </div>
                     </div>
-                    <div className="server-tags-block">
-                      <span className="skeleton skeleton--w60-h14" />
+                    <div className="detail-row">
+                      <span className="skeleton skeleton--w14-h14" />
                       <span className="skeleton skeleton--w80-h24" />
-                      <span className="skeleton skeleton--w50-h24" />
                     </div>
                     <div className="server-actions">
                       <div className="server-actions-buttons">

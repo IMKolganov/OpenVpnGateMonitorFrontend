@@ -1,12 +1,12 @@
 .footer {
   text-align: center;
-  padding: 0.55rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   border-top: 1px solid var(--border-color);
   color: var(--text-muted);
   background-color: var(--bg-body);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-top: auto;
-  line-height: 1.35;
+  line-height: var(--line-height-body);
 }
 
 .footer-line {
@@ -15,8 +15,8 @@
 
 .footer-session-debug {
   margin: 0.25rem 0 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   letter-spacing: 0.01em;
 }

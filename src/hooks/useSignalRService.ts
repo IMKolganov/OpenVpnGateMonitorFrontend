@@ -13,6 +13,7 @@ import { ACCESS_TOKEN_KEY } from "../utils/const.ts";
 import { errorMessage } from "../utils/errorMessage.ts";
 import { getStatusStreamHubUrl } from "../utils/signalrHubUrl.ts";
 import { getSignalRPreferredTransport } from "../utils/signalrTransport.ts";
+import { isMockApiEnabled } from "../mocks/isMockApi.ts";
 
 const MIN_ISO = /^0001-01-01T00:00:00/i;
 
@@ -94,6 +95,12 @@ export default function useSignalRService() {
 
         const start = async () => {
             try {
+                if (isMockApiEnabled()) {
+                    setConnectionState("closed");
+                    setLastError(null);
+                    return;
+                }
+
                 const token = localStorage.getItem(ACCESS_TOKEN_KEY);
                 if (!token) {
                     setConnectionState("no-token");

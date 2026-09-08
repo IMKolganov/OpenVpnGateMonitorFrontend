@@ -22,7 +22,7 @@
 
 .form-group label {
   font-weight: bold;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
   margin-bottom: 5px;
 }
@@ -33,7 +33,7 @@
 }
 
 .field-description {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   margin-bottom: 5px;
 }
@@ -65,7 +65,7 @@ input[name="createDate"] {
   }
 
   .form-group input {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     padding: 10px;
   }
 }

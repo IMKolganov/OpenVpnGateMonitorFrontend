@@ -30,14 +30,14 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: var(--text-primary);
 }
 
 /* Page title above card (like GitHub) */
 
 .login-page-title {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   font-weight: 400;
   color: var(--text-primary);
   text-align: center;
@@ -51,7 +51,7 @@
   border: 1px solid var(--border-color);
   background-color: color-mix(in srgb, var(--bg-content) 92%, var(--text-primary) 8%);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.45;
   text-align: center;
 }
@@ -70,7 +70,7 @@
 /* Optional title inside card (if used somewhere) */
 
 .login-title-main {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   margin: 0 0 12px;
   color: var(--text-primary);
@@ -95,7 +95,7 @@
 }
 
 .login-item h4 {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 6px;
@@ -114,7 +114,7 @@
 }
 
 .forgot-password-link {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #58a6ff;
   text-decoration: none;
 }
@@ -132,7 +132,7 @@
   border: 1px solid var(--border-color);
   background-color: var(--bg-body);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -189,7 +189,7 @@
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 10px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #fda29b;
   line-height: 1.4;
 }
@@ -212,7 +212,7 @@
   align-items: center;
   margin: 14px 0;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .login-divider::before,
@@ -248,7 +248,7 @@
   background-color: var(--bg-content-alt);
   color: var(--text-primary);
   padding: 0 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -267,7 +267,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 0;
 }
 
@@ -286,7 +286,7 @@
 }
 
 .login-info-text {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-secondary);
   margin: 0 0 8px;
   line-height: 1.5;
@@ -306,7 +306,7 @@
 .register-container {
   text-align: center;
   margin-top: 16px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-muted);
 }
 
@@ -327,7 +327,7 @@
   gap: 6px;
   margin-top: 12px;
   padding: 6px 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-muted);
   background: transparent;
   border: 1px solid var(--border-color);
@@ -340,7 +340,7 @@
   border-color: var(--border-color);
 }
 .login-theme-toggle .icon {
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 /* Responsive */
@@ -355,7 +355,7 @@
   }
 
   .login-title-main {
-    font-size: 16px;
+    font-size: var(--font-size-lg);
   }
 }
 
@@ -390,12 +390,12 @@
   background-color: var(--bg-content-alt);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .login-totp-lead {
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--text-secondary);
   text-align: center;
@@ -410,7 +410,7 @@
 .login-totp-code-input {
   text-align: center;
   letter-spacing: 0.25em;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-variant-numeric: tabular-nums;
 }
 
