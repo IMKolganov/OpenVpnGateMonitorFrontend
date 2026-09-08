@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildServerGroupSections, UNGROUPED_GROUP_ID } from "./serverGroups";
-import { buildUngroupedMemberIds } from "../pages/GroupDetails";
+import {
+  buildServerGroupSections,
+  ungroupedServerIds,
+  UNGROUPED_GROUP_ID,
+} from "./serverGroups";
 
 describe("buildServerGroupSections", () => {
   it("orders groups and servers, then ungrouped", () => {
@@ -41,14 +44,10 @@ describe("buildServerGroupSections", () => {
   });
 });
 
-describe("buildUngroupedMemberIds", () => {
-  it("sorts ungrouped servers by sortOrder", () => {
-    const ids = buildUngroupedMemberIds(
-      [
-        { id: 3, name: "C", sortOrder: 2, groupId: null },
-        { id: 1, name: "A", sortOrder: 0, groupId: null },
-        { id: 2, name: "B", sortOrder: 1, groupId: 10 },
-      ],
+describe("ungroupedServerIds", () => {
+  it("returns servers that are not in any named group", () => {
+    const ids = ungroupedServerIds(
+      [1, 3, 2],
       [{ id: 10, name: "EU", sortOrder: 0, serverIds: [2] }],
     );
     expect(ids).toEqual([1, 3]);

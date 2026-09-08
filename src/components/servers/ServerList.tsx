@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaSyncAlt, FaPlus, FaFolderPlus, FaExpand, FaCompress, FaChevronLeft, FaList, FaThList } from "react-icons/fa";
-import { useNavigate, useLocation, useMatch } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useMediaQuery } from "react-responsive";
 import { toast } from "react-toastify";
 import "../../css/ServerList.css";
@@ -10,6 +10,7 @@ import "../../css/ServerList.css";
 import useSignalRService from "../../hooks/useSignalRService";
 import ServerItem from "./ServerItem";
 import ServerGroupHeader from "./ServerGroupHeader";
+import { AddServersToGroupModal } from "./AddServersToGroupModal";
 import ServiceControls from "../ServiceControls";
 
 import { getCurrentUser, isAdmin } from "../../utils/auth/authSelectors";
@@ -20,8 +21,13 @@ import {
   saveCollapsedGroups,
   loadServerDetailsHidden,
   saveServerDetailsHidden,
+  findGroupForServer,
+  readGroupsPayload,
+  UNGROUPED_GROUP_ID,
   type CollapsedGroupsMap,
+  type GroupAssignTarget,
 } from "../../utils/serverGroups";
+import { assignServersToGroup } from "../../utils/assignServerGroup";
 
 import { deleteApiOpenVpnServersDeleteVpnServerId } from "../../api/orval/vpn-servers/vpn-servers";
 import {
@@ -31,10 +37,11 @@ import {
 import {
   useGetApiVpnServerGroupsGetAll,
   usePostApiVpnServerGroupsCreate,
+  usePutApiVpnServerGroupsUpdateId,
+  useDeleteApiVpnServerGroupsDeleteId,
   getGetApiVpnServerGroupsGetAllQueryKey,
 } from "../../api/orval/vpn-server-groups/vpn-server-groups";
 import type { VpnServerGroupsDtoVpnServerGroupDto } from "../../api/orval/model/vpnServerGroupsDtoVpnServerGroupDto";
-
 import { ServiceStatus } from "../../api/orvalModelShim";
 import type {
   ServiceStatusDto,
@@ -106,17 +113,6 @@ const extractList = (resp: GetAllWithStatusData): OrvalServerItem[] => {
   return Array.isArray(list) ? list : [];
 };
 
-function readGroupsPayload(data: unknown): VpnServerGroupsDtoVpnServerGroupDto[] {
-  if (!data || typeof data !== "object") return [];
-  const raw = data as Record<string, unknown>;
-  if (Array.isArray(raw.groups)) return raw.groups as VpnServerGroupsDtoVpnServerGroupDto[];
-  const nested = raw.data;
-  if (nested && typeof nested === "object" && Array.isArray((nested as { groups?: unknown }).groups)) {
-    return (nested as { groups: VpnServerGroupsDtoVpnServerGroupDto[] }).groups;
-  }
-  return [];
-}
-
 const resolveServerId = (item: OrvalServerItem): number => {
   const id =
       item.vpnServerResponses?.vpnServer?.id ??
@@ -155,8 +151,6 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useMediaQuery({ maxWidth: 768 });
-  const groupMatch = useMatch({ path: "/servers/groups/:groupId", end: true });
-  const selectedGroupParam = groupMatch?.params.groupId ?? null;
 
   const { serviceData, runServiceNow, connectionState: hubConnectionState, lastError: hubLastError } =
       useSignalRService();
@@ -166,6 +160,10 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
 
   const [collapsedMap, setCollapsedMap] = useState<CollapsedGroupsMap>(() => loadCollapsedGroups());
   const [detailsHidden, setDetailsHidden] = useState(() => loadServerDetailsHidden());
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [renamingKey, setRenamingKey] = useState<string | null>(null);
+  const [addServersGroupId, setAddServersGroupId] = useState<number | null>(null);
 
   const {
     data: baseServers = [],
@@ -216,6 +214,8 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
   const groupsQuery = useGetApiVpnServerGroupsGetAll();
   const groups = useMemo(() => readGroupsPayload(groupsQuery.data), [groupsQuery.data]);
   const createGroupMutation = usePostApiVpnServerGroupsCreate();
+  const renameGroupMutation = usePutApiVpnServerGroupsUpdateId();
+  const deleteGroupMutation = useDeleteApiVpnServerGroupsDeleteId();
 
   const servers = useMemo(() => {
     // Guard against a poisoned React Query cache (wrong shape under the same key).
@@ -257,6 +257,22 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
     () => buildServerGroupSections(servers, groups),
     [servers, groups],
   );
+
+  const addServersGroup = groups.find((g) => g.id === addServersGroupId);
+  const addableServers = useMemo(() => {
+    if (addServersGroupId == null) return [];
+    const memberIds = new Set(addServersGroup?.serverIds ?? []);
+    return servers
+      .filter((s) => !memberIds.has(s.id))
+      .map((s) => {
+        const current = findGroupForServer(groups, s.id);
+        return {
+          id: s.id,
+          name: s.raw.vpnServerResponses?.vpnServer?.serverName?.trim() || `Server ${s.id}`,
+          currentGroupName: current?.name?.trim() || null,
+        };
+      });
+  }, [addServersGroupId, addServersGroup?.serverIds, servers, groups]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this server?")) return;
@@ -309,21 +325,94 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
     });
   };
 
-  const addGroup = async () => {
-    const name = window.prompt("New group name");
-    if (!name?.trim()) return;
+  const invalidateGroupsAndServers = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: V3_SERVERS_WITH_STATUS_KEY }),
+    ]);
+  };
+
+  const addGroup = () => {
+    setCreatingGroup(true);
+    setNewGroupName("");
+  };
+
+  const cancelCreateGroup = () => {
+    setCreatingGroup(false);
+    setNewGroupName("");
+  };
+
+  const saveNewGroup = async () => {
+    const name = newGroupName.trim();
+    if (!name) return;
     try {
-      const created = await createGroupMutation.mutateAsync({ data: { name: name.trim() } });
-      const payload = created as Record<string, unknown> | undefined;
-      const group =
-        (payload?.group as { id?: number } | undefined) ??
-        ((payload?.data as { group?: { id?: number } } | undefined)?.group);
-      const id = group?.id;
+      const created = await createGroupMutation.mutateAsync({ data: { name } });
+      const payload = created as { group?: { id?: number }; data?: { group?: { id?: number } } };
+      const id = payload?.group?.id ?? payload?.data?.group?.id;
       await queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() });
       toast.success("Group created");
-      if (typeof id === "number") navigate(`/servers/groups/${id}`);
+      setCreatingGroup(false);
+      setNewGroupName("");
+      if (typeof id === "number") {
+        setCollapsedMap((prev) => {
+          const next = { ...prev, [String(id)]: false };
+          saveCollapsedGroups(next);
+          return next;
+        });
+      }
     } catch {
       toast.error("Failed to create group");
+    }
+  };
+
+  const commitRenameGroup = async (id: number, name: string) => {
+    try {
+      await renameGroupMutation.mutateAsync({ id, data: { name } });
+      toast.success("Group renamed");
+      setRenamingKey(null);
+      await queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() });
+    } catch {
+      toast.error("Failed to rename group");
+    }
+  };
+
+  const deleteGroup = async (id: number, name: string) => {
+    if (!window.confirm(`Delete "${name}"? Servers will become ungrouped.`)) return;
+    try {
+      await deleteGroupMutation.mutateAsync({ id });
+      toast.success("Group deleted");
+      await invalidateGroupsAndServers();
+    } catch {
+      toast.error("Failed to delete group");
+    }
+  };
+
+  const assignServer = async (serverId: number, target: GroupAssignTarget, confirmMove = true) => {
+    const from = findGroupForServer(groups, serverId);
+    const serverName =
+      servers.find((s) => s.id === serverId)?.raw.vpnServerResponses?.vpnServer?.serverName ??
+      `Server ${serverId}`;
+    if (confirmMove && from && typeof from.id === "number" && from.id !== target) {
+      const targetLabel =
+        target === UNGROUPED_GROUP_ID
+          ? "Ungrouped"
+          : groups.find((g) => g.id === target)?.name?.trim() || "this group";
+      const ok = window.confirm(
+        `"${serverName}" is in "${from.name?.trim() || `Group ${from.id}`}". Move it to ${targetLabel}?`,
+      );
+      if (!ok) return;
+    }
+    try {
+      await assignServersToGroup({
+        target,
+        groups,
+        allServerIds: servers.map((s) => s.id),
+        addServerIds: [serverId],
+      });
+      toast.success("Server group updated");
+      await invalidateGroupsAndServers();
+    } catch {
+      toast.error("Failed to update server group");
     }
   };
 
@@ -402,6 +491,17 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
         }}
         onEdit={(id) => navigate(`/servers/edit/${id}`)}
         onDelete={handleDelete}
+        groups={groups
+          .filter((g): g is typeof g & { id: number } => typeof g.id === "number")
+          .map((g) => ({ id: g.id, name: g.name?.trim() || `Group ${g.id}` }))}
+        currentGroupId={findGroupForServer(groups, server.id)?.id ?? server.groupId ?? null}
+        onAssignGroup={
+          canAddServer
+            ? (serverId, target) => {
+                void assignServer(serverId, target);
+              }
+            : undefined
+        }
       />
     </li>
   );
@@ -433,7 +533,11 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
               )}
 
               {canAddServer && (
-                  <button className="btn secondary" onClick={() => void addGroup()}>
+                  <button
+                    className="btn secondary"
+                    onClick={addGroup}
+                    disabled={creatingGroup}
+                  >
                     <span className="icon">{FaFolderPlus({ className: "icon" })}</span>
                     Add Group
                   </button>
@@ -540,20 +644,72 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
             </ul>
         ) : (
             <div className="server-groups">
-              {servers.length > 0 || groups.length > 0 ? (
+              {creatingGroup && (
+                <form
+                  className="server-group-create"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void saveNewGroup();
+                  }}
+                >
+                  <input
+                    className="input"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    maxLength={64}
+                    placeholder="New group name"
+                    aria-label="New group name"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelCreateGroup();
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn primary"
+                    disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                  >
+                    Save
+                  </button>
+                  <button type="button" className="btn secondary" onClick={cancelCreateGroup}>
+                    Cancel
+                  </button>
+                </form>
+              )}
+              {servers.length > 0 || groups.length > 0 || creatingGroup ? (
                   sections.map((section) => {
                     const key = String(section.key);
                     const collapsed = Boolean(collapsedMap[key]);
-                    const selected = selectedGroupParam === key;
+                    const isNamed = typeof section.key === "number";
                     return (
                       <div key={key} className="server-group">
                         <ServerGroupHeader
                           name={section.name}
                           count={section.servers.length}
                           collapsed={collapsed}
-                          selected={selected}
+                          canManage={canAddServer && isNamed}
+                          renaming={renamingKey === key}
                           onToggleCollapse={() => toggleCollapse(key)}
-                          onOpen={() => navigate(`/servers/groups/${key}`)}
+                          onStartRename={
+                            isNamed ? () => setRenamingKey(key) : undefined
+                          }
+                          onCommitRename={
+                            isNamed
+                              ? (name) => void commitRenameGroup(section.key as number, name)
+                              : undefined
+                          }
+                          onCancelRename={() => setRenamingKey(null)}
+                          onAddServers={
+                            isNamed ? () => setAddServersGroupId(section.key as number) : undefined
+                          }
+                          onDelete={
+                            isNamed
+                              ? () => void deleteGroup(section.key as number, section.name)
+                              : undefined
+                          }
                         />
                         {!collapsed && (
                           <ul className="list server-group-list">
@@ -579,6 +735,18 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
             onOpenDetails={() => navigate("/servers/status-stream-logs")}
             hubConnectionState={hubConnectionState}
             hubLastError={hubLastError}
+        />
+
+        <AddServersToGroupModal
+          isOpen={addServersGroupId != null}
+          groupName={addServersGroup?.name?.trim() || "this group"}
+          servers={addableServers}
+          busy={false}
+          onClose={() => setAddServersGroupId(null)}
+          onAdd={(serverId) => {
+            if (addServersGroupId == null) return;
+            void assignServer(serverId, addServersGroupId);
+          }}
         />
       </div>
   );

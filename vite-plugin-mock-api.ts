@@ -25,7 +25,65 @@ function pathnameOf(req: IncomingMessage): string {
 
 const nowIso = () => new Date().toISOString();
 
+type MockGroup = { id: number; name: string; sortOrder: number; serverIds: number[] };
+
+let nextMockGroupId = 11;
+let mockGroups: MockGroup[] = [{ id: 10, name: "EU", sortOrder: 0, serverIds: [1] }];
+
+function cloneGroups(): MockGroup[] {
+  return mockGroups.map((g) => ({ ...g, serverIds: [...g.serverIds] }));
+}
+
+function groupForServer(serverId: number): MockGroup | undefined {
+  return mockGroups.find((g) => g.serverIds.includes(serverId));
+}
+
+function removeServerFromAllGroups(serverId: number): void {
+  for (const g of mockGroups) {
+    g.serverIds = g.serverIds.filter((id) => id !== serverId);
+  }
+}
+
+function setNamedGroupServers(groupId: number, vpnServerIds: number[]): MockGroup | null {
+  const group = mockGroups.find((g) => g.id === groupId);
+  if (!group) return null;
+  for (const id of vpnServerIds) removeServerFromAllGroups(id);
+  group.serverIds = [...vpnServerIds];
+  return group;
+}
+
+function setUngroupedServers(vpnServerIds: number[]): void {
+  for (const id of vpnServerIds) removeServerFromAllGroups(id);
+}
+
+function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on("end", () => {
+      if (chunks.length === 0) {
+        resolve({});
+        return;
+      }
+      try {
+        const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+        resolve(parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {});
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
+function asIdList(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((id): id is number => typeof id === "number");
+}
+
 function stubVpnServer(id: number, name: string, serverType: 0 | 1, extra?: Record<string, unknown>) {
+  const group = groupForServer(id);
   return {
     id,
     serverType,
@@ -40,8 +98,8 @@ function stubVpnServer(id: number, name: string, serverType: 0 | 1, extra?: Reco
     lastUpdate: nowIso(),
     isDeleted: false,
     tags: ["mock"],
-    groupId: null,
-    groupName: null,
+    groupId: group?.id ?? null,
+    groupName: group?.name ?? null,
     sortOrder: id,
     isAccessibleForUserQuotaPlan: true,
     isDisabled: false,
@@ -113,7 +171,7 @@ function overviewSeries() {
   };
 }
 
-function mockPayload(pathname: string, method: string): Json | null {
+function mockPayload(pathname: string, method: string, body: Record<string, unknown> = {}): Json | null {
   if (pathname.includes("/api/hubs/")) {
     return { error: "SignalR is disabled in mock mode" };
   }
@@ -131,7 +189,43 @@ function mockPayload(pathname: string, method: string): Json | null {
     return { notifications: [], totalCount: 0 };
   }
   if (pathname.endsWith("/api/vpn-server-groups/get-all")) {
-    return { groups: [] };
+    return { groups: cloneGroups() };
+  }
+  if (method === "POST" && pathname.endsWith("/api/vpn-server-groups/create")) {
+    const name = String(body.name ?? "").trim() || "Group";
+    const group: MockGroup = {
+      id: nextMockGroupId++,
+      name,
+      sortOrder: mockGroups.length,
+      serverIds: [],
+    };
+    mockGroups = [...mockGroups, group];
+    return { group: { ...group, serverIds: [...group.serverIds] } };
+  }
+  const updateGroup = pathname.match(/\/api\/vpn-server-groups\/update\/(\d+)$/);
+  if (method === "PUT" && updateGroup) {
+    const id = Number(updateGroup[1]);
+    const group = mockGroups.find((g) => g.id === id);
+    if (!group) return { group: null };
+    const name = String(body.name ?? group.name).trim();
+    if (name) group.name = name;
+    return { group: { ...group, serverIds: [...group.serverIds] } };
+  }
+  const deleteGroup = pathname.match(/\/api\/vpn-server-groups\/delete\/(\d+)$/);
+  if (method === "DELETE" && deleteGroup) {
+    const id = Number(deleteGroup[1]);
+    mockGroups = mockGroups.filter((g) => g.id !== id);
+    return {};
+  }
+  const setServers = pathname.match(/\/api\/vpn-server-groups\/(\d+)\/set-servers$/);
+  if (method === "PUT" && setServers) {
+    const id = Number(setServers[1]);
+    const group = setNamedGroupServers(id, asIdList(body.vpnServerIds));
+    return { group: group ? { ...group, serverIds: [...group.serverIds] } : null };
+  }
+  if (method === "PUT" && pathname.endsWith("/api/vpn-server-groups/ungrouped/set-servers")) {
+    setUngroupedServers(asIdList(body.vpnServerIds));
+    return {};
   }
   if (pathname.includes("/discoveries/pending")) {
     return { discoveries: [] };
@@ -221,7 +315,12 @@ export function mockApiPlugin(enabled: boolean): Plugin {
           return;
         }
 
-        sendJson(res, envelope(mockPayload(pathname, method)));
+        const finish = async () => {
+          const body =
+            method === "GET" || method === "HEAD" ? {} : await readJsonBody(req);
+          sendJson(res, envelope(mockPayload(pathname, method, body)));
+        };
+        void finish();
       });
     },
   };

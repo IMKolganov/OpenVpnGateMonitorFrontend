@@ -56,6 +56,18 @@ import {
 } from "../api/orval/quota-plan-allowed-server/quota-plan-allowed-server";
 import { getGetApiV3OpenVpnServersGetAllWithStatusQueryKey } from "../api/orval/vpn-servers-v3/vpn-servers-v3";
 import {
+  useGetApiVpnServerGroupsGetAll,
+  getGetApiVpnServerGroupsGetAllQueryKey,
+} from "../api/orval/vpn-server-groups/vpn-server-groups";
+import type { VpnServerGroupsDtoVpnServerGroupDto } from "../api/orval/model/vpnServerGroupsDtoVpnServerGroupDto";
+import {
+  UNGROUPED_GROUP_ID,
+  findGroupForServer,
+  readGroupsPayload,
+  type GroupAssignTarget,
+} from "../utils/serverGroups";
+import { assignServersToGroup } from "../utils/assignServerGroup";
+import {
   getGetApiOpenVpnServersGetVpnServerIdQueryKey,
   getGetApiOpenVpnServersGetServerWithStatusVpnServerIdQueryKey,
 } from "../api/orval/vpn-servers/vpn-servers";
@@ -108,6 +120,8 @@ function unwrapServerDto(raw: GetByIdResult | undefined): VpnServerDto | null {
     createDate: o["createDate"] as string | undefined,
     lastUpdate: o["lastUpdate"] as string | undefined,
     tags: Array.isArray(o["tags"]) ? o["tags"] : (o["tags"] as string[] | null | undefined) ?? null,
+    groupId: typeof o["groupId"] === "number" ? o["groupId"] : null,
+    groupName: (o["groupName"] as string | null | undefined) ?? null,
   };
 
   return dto;
@@ -425,6 +439,18 @@ const ServerForm: React.FC = () => {
   });
 
   const { data: tagsResp } = useGetApiTagsGetAll();
+  const groupsQuery = useGetApiVpnServerGroupsGetAll();
+  const groups = React.useMemo(
+    () => readGroupsPayload(groupsQuery.data),
+    [groupsQuery.data],
+  );
+  const [selectedGroupTarget, setSelectedGroupTarget] = React.useState<string>(UNGROUPED_GROUP_ID);
+  const initialGroupHydrated = React.useRef(false);
+
+  React.useEffect(() => {
+    initialGroupHydrated.current = false;
+    setSelectedGroupTarget(UNGROUPED_GROUP_ID);
+  }, [idNum]);
 
   const getPlansMutation = usePostApiQuotaPlansGetAll();
   const [quotaPlans, setQuotaPlans] = React.useState<QuotaPlanDto[]>([]);
@@ -460,6 +486,14 @@ const ServerForm: React.FC = () => {
     createDate: new Date().toISOString(),
     lastUpdate: new Date().toISOString(),
   });
+
+  React.useEffect(() => {
+    if (!idNum || initialGroupHydrated.current) return;
+    if (!groupsQuery.isFetched && serverData.groupId == null) return;
+    const found = findGroupForServer(groups, idNum)?.id ?? serverData.groupId ?? null;
+    setSelectedGroupTarget(found != null ? String(found) : UNGROUPED_GROUP_ID);
+    initialGroupHydrated.current = true;
+  }, [idNum, groups, groupsQuery.isFetched, serverData.groupId]);
 
   const isOpenVpnForQueries = (serverData.serverType ?? VpnServerType.OpenVpn) === VpnServerType.OpenVpn;
 
@@ -599,6 +633,7 @@ const ServerForm: React.FC = () => {
         isPiHoleEnabled: dto.isPiHoleEnabled ?? false,
         lastUpdate: dto.lastUpdate ?? prev.lastUpdate,
         createDate: dto.createDate ?? prev.createDate,
+        groupId: dto.groupId ?? prev.groupId ?? null,
       }));
 
       const tagNames = dto.tags ?? [];
@@ -794,6 +829,30 @@ const ServerForm: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
+    const persistGroupIfNeeded = async (vpnServerId: number) => {
+      const currentId = findGroupForServer(groups, vpnServerId)?.id ?? null;
+      const target: GroupAssignTarget =
+        selectedGroupTarget === UNGROUPED_GROUP_ID
+          ? UNGROUPED_GROUP_ID
+          : Number(selectedGroupTarget);
+      if (!Number.isFinite(target as number) && target !== UNGROUPED_GROUP_ID) return;
+      const currentKey: GroupAssignTarget = currentId ?? UNGROUPED_GROUP_ID;
+      if (currentKey === target) return;
+      const allServerIds = Array.from(
+        new Set([
+          ...groups.flatMap((g) => (g.serverIds ?? []).filter((id): id is number => typeof id === "number")),
+          vpnServerId,
+        ]),
+      );
+      await assignServersToGroup({
+        target,
+        groups,
+        allServerIds,
+        addServerIds: [vpnServerId],
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() });
+    };
+
     const invalidateQuotaCaches = (vpnServerId: number) => {
       queryClient.invalidateQueries({
         queryKey: getGetApiQuotaPlanAllowedServersGetByVpnServerIdVpnServerIdQueryKey(vpnServerId),
@@ -825,6 +884,12 @@ const ServerForm: React.FC = () => {
         };
 
         await updateMutation.mutateAsync({ data: payload });
+
+        try {
+          await persistGroupIfNeeded(idNum);
+        } catch {
+          toast.warning("Server saved, but group assignment failed.");
+        }
 
         if (isOpenVpnServer) {
           await saveOvpnConfigMutation.mutateAsync({
@@ -860,6 +925,14 @@ const ServerForm: React.FC = () => {
 
         const addResult = await addMutation.mutateAsync({ data: payload });
         const newId = unwrapNewServerIdFromAdd(addResult);
+
+        if (newId) {
+          try {
+            await persistGroupIfNeeded(newId);
+          } catch {
+            toast.warning("Server added, but group assignment failed.");
+          }
+        }
 
         let navigateTo: string | null = "/";
 
@@ -974,6 +1047,27 @@ const ServerForm: React.FC = () => {
                   disabled={isFetching}
               />
               {errors.serverName && <p className="error-message">{errors.serverName}</p>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="ServerGroup">Group</label>
+              <select
+                id="ServerGroup"
+                name="serverGroup"
+                className="input"
+                value={selectedGroupTarget}
+                onChange={(e) => setSelectedGroupTarget(e.target.value)}
+                disabled={isFetching}
+              >
+                <option value={UNGROUPED_GROUP_ID}>Ungrouped</option>
+                {groups
+                  .filter((g): g is VpnServerGroupsDtoVpnServerGroupDto & { id: number } => typeof g.id === "number")
+                  .map((g) => (
+                    <option key={g.id} value={String(g.id)}>
+                      {g.name?.trim() || `Group ${g.id}`}
+                    </option>
+                  ))}
+              </select>
             </div>
 
             <div className="form-group">

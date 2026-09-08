@@ -112,3 +112,59 @@ export function buildServerGroupSections<T extends GroupableServer>(
 
   return sections;
 }
+
+export function readGroupsPayload(data: unknown): VpnServerGroupsDtoVpnServerGroupDto[] {
+  if (!data || typeof data !== "object") return [];
+  const raw = data as Record<string, unknown>;
+  if (Array.isArray(raw.groups)) return raw.groups as VpnServerGroupsDtoVpnServerGroupDto[];
+  const nested = raw.data;
+  if (nested && typeof nested === "object" && Array.isArray((nested as { groups?: unknown }).groups)) {
+    return (nested as { groups: VpnServerGroupsDtoVpnServerGroupDto[] }).groups;
+  }
+  return [];
+}
+
+export function groupServerIds(group: VpnServerGroupsDtoVpnServerGroupDto | undefined): number[] {
+  return (group?.serverIds ?? []).filter((id): id is number => typeof id === "number");
+}
+
+export function findGroupForServer(
+  groups: VpnServerGroupsDtoVpnServerGroupDto[],
+  serverId: number,
+): VpnServerGroupsDtoVpnServerGroupDto | undefined {
+  return groups.find(
+    (g) => typeof g.id === "number" && (g.serverIds ?? []).includes(serverId),
+  );
+}
+
+export function appendUniqueId(ids: number[], id: number): number[] {
+  return ids.includes(id) ? ids : [...ids, id];
+}
+
+export function ungroupedServerIds(
+  allServerIds: number[],
+  groups: VpnServerGroupsDtoVpnServerGroupDto[],
+): number[] {
+  const assigned = new Set<number>();
+  for (const g of groups) {
+    for (const id of g.serverIds ?? []) {
+      if (typeof id === "number") assigned.add(id);
+    }
+  }
+  return allServerIds.filter((id) => !assigned.has(id));
+}
+
+export type GroupAssignTarget = number | typeof UNGROUPED_GROUP_ID;
+
+export function nextMemberIdsForAssign(
+  groups: VpnServerGroupsDtoVpnServerGroupDto[],
+  allServerIds: number[],
+  target: GroupAssignTarget,
+  addServerIds: number[],
+): number[] {
+  const current =
+    target === UNGROUPED_GROUP_ID
+      ? ungroupedServerIds(allServerIds, groups)
+      : groupServerIds(groups.find((g) => g.id === target));
+  return addServerIds.reduce(appendUniqueId, current);
+}

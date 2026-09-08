@@ -21,6 +21,7 @@ import type {
 import { getCurrentUser, isAdmin } from "../../utils/auth/authSelectors";
 import { vpnServerTypeLabel } from "../../constants/vpnServerType";
 import { VpnStackLogo } from "./VpnStackLogo";
+import { UNGROUPED_GROUP_ID, type GroupAssignTarget } from "../../utils/serverGroups";
 
 interface Props {
     /** v2 includes quota plan groups and accessibility; v1 kept for detail pages still on legacy GET. */
@@ -40,6 +41,9 @@ interface Props {
     onView: (id: number) => void;
     onEdit: (id: number) => void;
     onDelete: (id: number) => void;
+    groups?: { id: number; name: string }[];
+    currentGroupId?: number | null;
+    onAssignGroup?: (serverId: number, target: GroupAssignTarget) => void;
 }
 
 const formatUtcDate = (utc: string | null | undefined) => {
@@ -97,6 +101,9 @@ const ServerItem: React.FC<Props> = ({
                                          onView,
                                          onEdit,
                                          onDelete,
+                                         groups = [],
+                                         currentGroupId = null,
+                                         onAssignGroup,
                                      }) => {
     const user = getCurrentUser();
     const canManage = isAdmin(user);
@@ -132,6 +139,9 @@ const ServerItem: React.FC<Props> = ({
                 <div className="server-info">
                     <strong className="server-name">
                         ({vpnServerId !== 0 ? vpnServerId : resolvedId}) {name}
+                        <span className="server-connected-count" title="Connected clients">
+                            ({connectedClients})
+                        </span>
                         <span
                             style={{
                                 marginLeft: 8,
@@ -186,6 +196,29 @@ const ServerItem: React.FC<Props> = ({
                     {isOnline ? "✅ Online" : "❌ Offline"}
                 </div>
             </div>
+            {canManage && onAssignGroup && (
+                <label className="server-group-assign" onClick={(e) => e.stopPropagation()}>
+                    <span className="server-group-assign__label">Group</span>
+                    <select
+                        className="input"
+                        value={currentGroupId != null ? String(currentGroupId) : UNGROUPED_GROUP_ID}
+                        aria-label="Move to group"
+                        onChange={(e) => {
+                            const raw = e.target.value;
+                            const target: GroupAssignTarget =
+                                raw === UNGROUPED_GROUP_ID ? UNGROUPED_GROUP_ID : Number(raw);
+                            onAssignGroup(resolvedId, target);
+                        }}
+                    >
+                        <option value={UNGROUPED_GROUP_ID}>Ungrouped</option>
+                        {groups.map((g) => (
+                            <option key={g.id} value={String(g.id)}>
+                                {g.name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            )}
             {isCurrentUserConnected ? (
                 <div className="server-self-connected-note">
                     You are currently connected to this server.
