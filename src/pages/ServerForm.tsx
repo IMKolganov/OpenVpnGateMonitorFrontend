@@ -63,8 +63,9 @@ import type { VpnServerGroupsDtoVpnServerGroupDto } from "../api/orval/model/vpn
 import {
   UNGROUPED_GROUP_ID,
   findGroupForServer,
+  parseGroupAssignTarget,
   readGroupsPayload,
-  type GroupAssignTarget,
+  shouldPersistGroupAssign,
 } from "../utils/serverGroups";
 import { assignServersToGroup } from "../utils/assignServerGroup";
 import {
@@ -489,11 +490,18 @@ const ServerForm: React.FC = () => {
 
   React.useEffect(() => {
     if (!idNum || initialGroupHydrated.current) return;
-    if (!groupsQuery.isFetched && serverData.groupId == null) return;
-    const found = findGroupForServer(groups, idNum)?.id ?? serverData.groupId ?? null;
-    setSelectedGroupTarget(found != null ? String(found) : UNGROUPED_GROUP_ID);
+    if (!groupsQuery.isFetched) return;
+    const fromGroups = findGroupForServer(groups, idNum)?.id ?? null;
+    if (fromGroups != null) {
+      setSelectedGroupTarget(String(fromGroups));
+      initialGroupHydrated.current = true;
+      return;
+    }
+    if (!serverResp) return;
+    const fromDto = unwrapServerDto(serverResp)?.groupId ?? serverData.groupId ?? null;
+    setSelectedGroupTarget(fromDto != null ? String(fromDto) : UNGROUPED_GROUP_ID);
     initialGroupHydrated.current = true;
-  }, [idNum, groups, groupsQuery.isFetched, serverData.groupId]);
+  }, [idNum, groups, groupsQuery.isFetched, serverResp, serverData.groupId]);
 
   const isOpenVpnForQueries = (serverData.serverType ?? VpnServerType.OpenVpn) === VpnServerType.OpenVpn;
 
@@ -830,14 +838,10 @@ const ServerForm: React.FC = () => {
     if (!validateForm()) return;
 
     const persistGroupIfNeeded = async (vpnServerId: number) => {
+      const target = parseGroupAssignTarget(selectedGroupTarget);
+      if (target == null) return;
       const currentId = findGroupForServer(groups, vpnServerId)?.id ?? null;
-      const target: GroupAssignTarget =
-        selectedGroupTarget === UNGROUPED_GROUP_ID
-          ? UNGROUPED_GROUP_ID
-          : Number(selectedGroupTarget);
-      if (!Number.isFinite(target as number) && target !== UNGROUPED_GROUP_ID) return;
-      const currentKey: GroupAssignTarget = currentId ?? UNGROUPED_GROUP_ID;
-      if (currentKey === target) return;
+      if (!shouldPersistGroupAssign(currentId, target)) return;
       const allServerIds = Array.from(
         new Set([
           ...groups.flatMap((g) => (g.serverIds ?? []).filter((id): id is number => typeof id === "number")),

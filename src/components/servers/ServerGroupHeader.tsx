@@ -12,6 +12,7 @@ import {
 type Props = {
   name: string;
   count: number;
+  connectedCount?: number;
   collapsed: boolean;
   canManage?: boolean;
   onToggleCollapse: () => void;
@@ -21,11 +22,13 @@ type Props = {
   onAddServers?: () => void;
   onDelete?: () => void;
   renaming?: boolean;
+  dragHandle?: React.ReactNode;
 };
 
 export const ServerGroupHeader: React.FC<Props> = ({
   name,
   count,
+  connectedCount = 0,
   collapsed,
   canManage = false,
   onToggleCollapse,
@@ -35,6 +38,7 @@ export const ServerGroupHeader: React.FC<Props> = ({
   onAddServers,
   onDelete,
   renaming = false,
+  dragHandle,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState(name);
@@ -67,6 +71,7 @@ export const ServerGroupHeader: React.FC<Props> = ({
 
   return (
     <div className="server-group-header">
+      {dragHandle}
       {renaming ? (
         <form
           className="server-group-header__rename"
@@ -109,6 +114,7 @@ export const ServerGroupHeader: React.FC<Props> = ({
           type="button"
           className="server-group-header__main"
           aria-expanded={!collapsed}
+          aria-label={`${name}, ${connectedCount} connected, ${count} servers`}
           onClick={onToggleCollapse}
         >
           <span className="server-group-header__collapse" aria-hidden>
@@ -117,8 +123,13 @@ export const ServerGroupHeader: React.FC<Props> = ({
               : FaChevronDown({ className: "icon" })}
           </span>
           <span className="server-group-header__icon">{FaFolder({ className: "icon" })}</span>
-          <span className="server-group-header__name">{name}</span>
-          <span className="server-group-header__count">{count}</span>
+          <span className="server-group-header__title">
+            <span className="server-group-header__name">{name}</span>
+            <span className="server-group-header__clients" title="Connected clients">
+              ({connectedCount})
+            </span>
+          </span>
+          <span className="server-group-header__count" title="Servers in group">{count}</span>
         </button>
       )}
 

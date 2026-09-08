@@ -1,16 +1,45 @@
 // src/components/ServerList.tsx
 import React, { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FaSyncAlt, FaPlus, FaFolderPlus, FaExpand, FaCompress, FaChevronLeft, FaList, FaThList } from "react-icons/fa";
+import { FaSyncAlt, FaPlus, FaFolderPlus, FaFolder, FaExpand, FaCompress, FaChevronLeft, FaList, FaThList } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMediaQuery } from "react-responsive";
 import { toast } from "react-toastify";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import "../../css/ServerList.css";
 
 import useSignalRService from "../../hooks/useSignalRService";
 import ServerItem from "./ServerItem";
 import ServerGroupHeader from "./ServerGroupHeader";
 import { AddServersToGroupModal } from "./AddServersToGroupModal";
+import {
+  DroppableGroupSection,
+  SortableGroupSection,
+  SortableServerRow,
+  groupDragId,
+  groupDropId,
+  parseGroupDragId,
+  parseGroupDropId,
+  parseServerDragId,
+  serverDragId,
+  serverListCollisionDetection,
+} from "./ServerListSortable";
 import ServiceControls from "../ServiceControls";
 
 import { getCurrentUser, isAdmin } from "../../utils/auth/authSelectors";
@@ -21,8 +50,11 @@ import {
   saveCollapsedGroups,
   loadServerDetailsHidden,
   saveServerDetailsHidden,
+  loadGroupAssignVisible,
+  saveGroupAssignVisible,
   findGroupForServer,
   readGroupsPayload,
+  sumConnectedClients,
   UNGROUPED_GROUP_ID,
   type CollapsedGroupsMap,
   type GroupAssignTarget,
@@ -39,9 +71,11 @@ import {
   usePostApiVpnServerGroupsCreate,
   usePutApiVpnServerGroupsUpdateId,
   useDeleteApiVpnServerGroupsDeleteId,
+  putApiVpnServerGroupsReorder,
+  putApiVpnServerGroupsIdSetServers,
+  putApiVpnServerGroupsUngroupedSetServers,
   getGetApiVpnServerGroupsGetAllQueryKey,
 } from "../../api/orval/vpn-server-groups/vpn-server-groups";
-import type { VpnServerGroupsDtoVpnServerGroupDto } from "../../api/orval/model/vpnServerGroupsDtoVpnServerGroupDto";
 import { ServiceStatus } from "../../api/orvalModelShim";
 import type {
   ServiceStatusDto,
@@ -160,10 +194,21 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
 
   const [collapsedMap, setCollapsedMap] = useState<CollapsedGroupsMap>(() => loadCollapsedGroups());
   const [detailsHidden, setDetailsHidden] = useState(() => loadServerDetailsHidden());
+  const [groupAssignVisible, setGroupAssignVisible] = useState(() => loadGroupAssignVisible());
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [renamingKey, setRenamingKey] = useState<string | null>(null);
   const [addServersGroupId, setAddServersGroupId] = useState<number | null>(null);
+
+  const [activeDrag, setActiveDrag] = useState<{ type: "group" | "server"; name: string } | null>(
+    null,
+  );
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const {
     data: baseServers = [],
@@ -325,6 +370,14 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
     });
   };
 
+  const toggleGroupAssignVisible = () => {
+    setGroupAssignVisible((prev) => {
+      const next = !prev;
+      saveGroupAssignVisible(next);
+      return next;
+    });
+  };
+
   const invalidateGroupsAndServers = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() }),
@@ -416,6 +469,107 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
     }
   };
 
+  const persistGroupOrder = async (ids: number[]) => {
+    try {
+      await putApiVpnServerGroupsReorder({
+        items: ids.map((groupId, sortOrder) => ({ groupId, sortOrder })),
+      });
+      toast.success("Group order saved");
+      await queryClient.invalidateQueries({ queryKey: getGetApiVpnServerGroupsGetAllQueryKey() });
+    } catch {
+      toast.error("Failed to save group order");
+    }
+  };
+
+  const persistServerOrder = async (groupKey: string, ids: number[]) => {
+    try {
+      if (groupKey === UNGROUPED_GROUP_ID) {
+        await putApiVpnServerGroupsUngroupedSetServers({ vpnServerIds: ids });
+      } else {
+        const id = Number(groupKey);
+        if (!Number.isFinite(id)) return;
+        await putApiVpnServerGroupsIdSetServers(id, { vpnServerIds: ids });
+      }
+      toast.success("Server order saved");
+      await invalidateGroupsAndServers();
+    } catch {
+      toast.error("Failed to save server order");
+    }
+  };
+
+  const clearActiveDrag = () => setActiveDrag(null);
+
+  const onListDragStart = (event: DragStartEvent) => {
+    const id = String(event.active.id);
+    const groupId = parseGroupDragId(id);
+    if (groupId != null) {
+      const name = sections.find((s) => s.key === groupId)?.name ?? "Group";
+      setActiveDrag({ type: "group", name });
+      return;
+    }
+    const server = parseServerDragId(id);
+    if (!server) return;
+    const mapped = servers.find((s) => s.id === server.serverId);
+    const name =
+      mapped?.raw.vpnServerResponses?.vpnServer?.serverName?.trim() || `Server ${server.serverId}`;
+    setActiveDrag({ type: "server", name });
+  };
+
+  const onListDragEnd = (event: DragEndEvent) => {
+    clearActiveDrag();
+    if (!canAddServer) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeGroup = parseGroupDragId(String(active.id));
+    const overGroup = parseGroupDragId(String(over.id));
+    if (activeGroup != null && overGroup != null) {
+      const namedIds = sections
+        .filter((s) => typeof s.key === "number")
+        .map((s) => s.key as number);
+      const oldIndex = namedIds.indexOf(activeGroup);
+      const newIndex = namedIds.indexOf(overGroup);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+      void persistGroupOrder(arrayMove(namedIds, oldIndex, newIndex));
+      return;
+    }
+
+    const activeServer = parseServerDragId(String(active.id));
+    const overServer = parseServerDragId(String(over.id));
+    if (activeServer && overServer && activeServer.groupKey === overServer.groupKey) {
+      const section = sections.find((s) => String(s.key) === activeServer.groupKey);
+      if (!section) return;
+      const ids = section.servers.map((s) => s.id);
+      const oldIndex = ids.indexOf(activeServer.serverId);
+      const newIndex = ids.indexOf(overServer.serverId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+      void persistServerOrder(activeServer.groupKey, arrayMove(ids, oldIndex, newIndex));
+      return;
+    }
+
+    if (activeServer && overServer && activeServer.groupKey !== overServer.groupKey) {
+      const targetSection = sections.find((s) => String(s.key) === overServer.groupKey);
+      if (!targetSection) return;
+      const ids = targetSection.servers
+        .map((s) => s.id)
+        .filter((id) => id !== activeServer.serverId);
+      const insertAt = Math.max(0, ids.indexOf(overServer.serverId));
+      ids.splice(insertAt, 0, activeServer.serverId);
+      void persistServerOrder(overServer.groupKey, ids);
+      return;
+    }
+
+    const overDropKey = parseGroupDropId(String(over.id));
+    if (activeServer && overDropKey != null && overDropKey !== activeServer.groupKey) {
+      void persistServerOrder(overDropKey, [
+        ...(sections.find((s) => String(s.key) === overDropKey)?.servers.map((s) => s.id) ?? []).filter(
+          (id) => id !== activeServer.serverId,
+        ),
+        activeServer.serverId,
+      ]);
+    }
+  };
+
   const handleRefresh = () => {
     void Promise.all([loadServers(), groupsQuery.refetch()]);
   };
@@ -464,9 +618,13 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
     return acc;
   }, [servers, serviceData]);
 
-  const renderServer = (server: MappedServer) => (
-    <li
+  const renderServer = (server: MappedServer, groupKey: string) => (
+    <SortableServerRow
       key={server.id}
+      id={serverDragId(groupKey, server.id)}
+      groupKey={groupKey}
+      disabled={!canAddServer}
+      sortingDisabled={activeDrag?.type === "group"}
       className={`server-item clickable ${selectedServerId === server.id ? "selected" : ""}${
         serverRowIsDisabled(server.raw) ? " server-item--polling-off" : ""
       }${detailsHidden ? " server-item--compact" : ""}`}
@@ -496,14 +654,14 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
           .map((g) => ({ id: g.id, name: g.name?.trim() || `Group ${g.id}` }))}
         currentGroupId={findGroupForServer(groups, server.id)?.id ?? server.groupId ?? null}
         onAssignGroup={
-          canAddServer
+          canAddServer && groupAssignVisible
             ? (serverId, target) => {
                 void assignServer(serverId, target);
               }
             : undefined
         }
       />
-    </li>
+    </SortableServerRow>
   );
 
   return (
@@ -584,6 +742,26 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
                       </button>
                     </>
                   )}
+                  {canAddServer && (
+                    <button
+                      type="button"
+                      className={`server-groups-toolbar__btn${groupAssignVisible ? " is-active" : ""}`}
+                      onClick={toggleGroupAssignVisible}
+                      title={
+                        groupAssignVisible
+                          ? "Hide group assignment on cards"
+                          : "Show group assignment on cards"
+                      }
+                      aria-label={
+                        groupAssignVisible
+                          ? "Hide group assignment on cards"
+                          : "Show group assignment on cards"
+                      }
+                      aria-pressed={groupAssignVisible}
+                    >
+                      {FaFolder({ className: "icon" })}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`server-groups-toolbar__btn${detailsHidden ? " is-active" : ""}`}
@@ -645,57 +823,79 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
         ) : (
             <div className="server-groups">
               {creatingGroup && (
-                <form
-                  className="server-group-create"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void saveNewGroup();
-                  }}
-                >
-                  <input
-                    className="input"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    maxLength={64}
-                    placeholder="New group name"
-                    aria-label="New group name"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        cancelCreateGroup();
-                      }
+                <div className="server-group server-group--create">
+                  <form
+                    className="server-group-create"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveNewGroup();
                     }}
-                  />
-                  <button
-                    type="submit"
-                    className="btn primary"
-                    disabled={!newGroupName.trim() || createGroupMutation.isPending}
                   >
-                    Save
-                  </button>
-                  <button type="button" className="btn secondary" onClick={cancelCreateGroup}>
-                    Cancel
-                  </button>
-                </form>
+                    <input
+                      className="input"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      maxLength={64}
+                      placeholder="New group name"
+                      aria-label="New group name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          cancelCreateGroup();
+                        }
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                    >
+                      Save
+                    </button>
+                    <button type="button" className="btn secondary" onClick={cancelCreateGroup}>
+                      Cancel
+                    </button>
+                  </form>
+                </div>
+              )}
+              {canAddServer && (groups.length > 0 || servers.length > 1) && (
+                <p className="server-groups-hint">
+                  Drag the grip to reorder groups and servers. Drop a server on another group to move it.
+                </p>
               )}
               {servers.length > 0 || groups.length > 0 || creatingGroup ? (
-                  sections.map((section) => {
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={serverListCollisionDetection}
+                    onDragStart={onListDragStart}
+                    onDragCancel={clearActiveDrag}
+                    onDragEnd={onListDragEnd}
+                  >
+                    <SortableContext
+                      items={sections
+                        .filter((s) => typeof s.key === "number")
+                        .map((s) => groupDragId(s.key as number))}
+                      strategy={verticalListSortingStrategy}
+                    >
+                  {sections.map((section) => {
                     const key = String(section.key);
                     const collapsed = Boolean(collapsedMap[key]);
                     const isNamed = typeof section.key === "number";
-                    return (
-                      <div key={key} className="server-group">
+                    const serverIds = section.servers.map((s) => serverDragId(key, s.id));
+                    const connectedCount = sumConnectedClients(section.servers);
+                    const inner = (dragHandle?: React.ReactNode) => (
+                      <>
                         <ServerGroupHeader
                           name={section.name}
                           count={section.servers.length}
+                          connectedCount={connectedCount}
                           collapsed={collapsed}
                           canManage={canAddServer && isNamed}
                           renaming={renamingKey === key}
+                          dragHandle={dragHandle}
                           onToggleCollapse={() => toggleCollapse(key)}
-                          onStartRename={
-                            isNamed ? () => setRenamingKey(key) : undefined
-                          }
+                          onStartRename={isNamed ? () => setRenamingKey(key) : undefined}
                           onCommitRename={
                             isNamed
                               ? (name) => void commitRenameGroup(section.key as number, name)
@@ -712,17 +912,54 @@ const ServerList: React.FC<ServerListProps> = ({ onHideList }) => {
                           }
                         />
                         {!collapsed && (
-                          <ul className="list server-group-list">
-                            {section.servers.length > 0
-                              ? section.servers.map(renderServer)
-                              : (
-                                <li className="server-group-empty">No servers in this group.</li>
-                              )}
-                          </ul>
+                          <SortableContext items={serverIds} strategy={verticalListSortingStrategy}>
+                            <ul className="list server-group-list">
+                              {section.servers.length > 0
+                                ? section.servers.map((server) => renderServer(server, key))
+                                : (
+                                  <li className="server-group-empty">No servers in this group.</li>
+                                )}
+                            </ul>
+                          </SortableContext>
                         )}
-                      </div>
+                      </>
                     );
-                  })
+                    if (!isNamed) {
+                      return (
+                        <DroppableGroupSection
+                          key={key}
+                          dropId={groupDropId(key)}
+                          groupKey={key}
+                          disabled={!canAddServer}
+                          collapsed={collapsed}
+                        >
+                          {inner()}
+                        </DroppableGroupSection>
+                      );
+                    }
+                    return (
+                      <SortableGroupSection
+                        key={key}
+                        id={groupDragId(section.key as number)}
+                        dropId={groupDropId(key)}
+                        groupKey={key}
+                        disabled={!canAddServer}
+                        sortingDisabled={activeDrag?.type === "server"}
+                        collapsed={collapsed}
+                      >
+                        {(dragHandle) => inner(dragHandle)}
+                      </SortableGroupSection>
+                    );
+                  })}
+                    </SortableContext>
+                    <DragOverlay dropAnimation={null}>
+                      {activeDrag ? (
+                        <div className={`server-drag-overlay server-drag-overlay--${activeDrag.type}`}>
+                          {activeDrag.name}
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
               ) : (
                   <p>No servers available.</p>
               )}

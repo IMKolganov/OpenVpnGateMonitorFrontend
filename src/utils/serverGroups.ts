@@ -45,6 +45,24 @@ export function saveServerDetailsHidden(hidden: boolean): void {
   }
 }
 
+const GROUP_ASSIGN_VISIBLE_STORAGE_KEY = "datagate.serverList.groupAssignVisible";
+
+export function loadGroupAssignVisible(): boolean {
+  try {
+    return localStorage.getItem(GROUP_ASSIGN_VISIBLE_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function saveGroupAssignVisible(visible: boolean): void {
+  try {
+    localStorage.setItem(GROUP_ASSIGN_VISIBLE_STORAGE_KEY, visible ? "1" : "0");
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export type GroupableServer = {
   id: number;
   groupId?: number | null;
@@ -154,7 +172,43 @@ export function ungroupedServerIds(
   return allServerIds.filter((id) => !assigned.has(id));
 }
 
+export function connectedClientCount(server: {
+  wsCountConnectedClients?: number | null;
+  countConnectedClients?: number | null;
+  raw?: { countConnectedClients?: number | null } | null;
+}): number {
+  const n =
+    server.wsCountConnectedClients ??
+    server.countConnectedClients ??
+    server.raw?.countConnectedClients ??
+    0;
+  return typeof n === "number" && Number.isFinite(n) ? n : 0;
+}
+
+export function sumConnectedClients(
+  servers: Array<Parameters<typeof connectedClientCount>[0]>,
+): number {
+  return servers.reduce((sum, s) => sum + connectedClientCount(s), 0);
+}
+
 export type GroupAssignTarget = number | typeof UNGROUPED_GROUP_ID;
+
+export function parseGroupAssignTarget(value: string): GroupAssignTarget | null {
+  if (value === UNGROUPED_GROUP_ID) return UNGROUPED_GROUP_ID;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export function currentGroupAssignKey(groupId: number | null | undefined): GroupAssignTarget {
+  return typeof groupId === "number" ? groupId : UNGROUPED_GROUP_ID;
+}
+
+export function shouldPersistGroupAssign(
+  currentGroupId: number | null | undefined,
+  target: GroupAssignTarget,
+): boolean {
+  return currentGroupAssignKey(currentGroupId) !== target;
+}
 
 export function nextMemberIdsForAssign(
   groups: VpnServerGroupsDtoVpnServerGroupDto[],

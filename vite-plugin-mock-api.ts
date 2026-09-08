@@ -28,7 +28,7 @@ const nowIso = () => new Date().toISOString();
 type MockGroup = { id: number; name: string; sortOrder: number; serverIds: number[] };
 
 let nextMockGroupId = 11;
-let mockGroups: MockGroup[] = [{ id: 10, name: "EU", sortOrder: 0, serverIds: [1] }];
+let mockGroups: MockGroup[] = [{ id: 10, name: "EU", sortOrder: 0, serverIds: [1, 3] }];
 
 function cloneGroups(): MockGroup[] {
   return mockGroups.map((g) => ({ ...g, serverIds: [...g.serverIds] }));
@@ -107,44 +107,108 @@ function stubVpnServer(id: number, name: string, serverType: 0 | 1, extra?: Reco
   };
 }
 
+type MockServerRecord = {
+  id: number;
+  name: string;
+  serverType: 0 | 1;
+  fields: Record<string, unknown>;
+  status: Record<string, unknown>;
+  countConnectedClients: number;
+  countSessions: number;
+  totalBytesIn: number;
+  totalBytesOut: number;
+};
+
+let nextMockServerId = 4;
+let mockServerStore: MockServerRecord[] = [
+  {
+    id: 1,
+    name: "Helsinki OpenVPN",
+    serverType: 0,
+    fields: {},
+    status: {
+      vpnServerId: 1,
+      sessionId: "mock-session-1",
+      upSince: nowIso(),
+      serverLocalIp: "10.8.0.1",
+      serverRemoteIp: "203.0.113.10",
+      bytesIn: 128_000_000,
+      bytesOut: 64_000_000,
+      version: "2.6.12",
+    },
+    countConnectedClients: 3,
+    countSessions: 11,
+    totalBytesIn: 128_000_000,
+    totalBytesOut: 64_000_000,
+  },
+  {
+    id: 2,
+    name: "Frankfurt Xray",
+    serverType: 1,
+    fields: {},
+    status: {
+      vpnServerId: 2,
+      sessionId: "mock-session-2",
+      upSince: nowIso(),
+      bytesIn: 32_000_000,
+      bytesOut: 18_000_000,
+      version: "1.8.0",
+    },
+    countConnectedClients: 1,
+    countSessions: 4,
+    totalBytesIn: 32_000_000,
+    totalBytesOut: 18_000_000,
+  },
+  {
+    id: 3,
+    name: "Tallinn OpenVPN",
+    serverType: 0,
+    fields: { latitude: 59.44, longitude: 24.75 },
+    status: {
+      vpnServerId: 3,
+      sessionId: "mock-session-3",
+      upSince: nowIso(),
+      serverLocalIp: "10.8.0.3",
+      serverRemoteIp: "203.0.113.30",
+      bytesIn: 48_000_000,
+      bytesOut: 22_000_000,
+      version: "2.6.12",
+    },
+    countConnectedClients: 2,
+    countSessions: 6,
+    totalBytesIn: 48_000_000,
+    totalBytesOut: 22_000_000,
+  },
+];
+
+function findStoredServer(id: number): MockServerRecord | undefined {
+  return mockServerStore.find((s) => s.id === id);
+}
+
+function vpnServerFromStore(row: MockServerRecord) {
+  return stubVpnServer(row.id, row.name, row.serverType, row.fields);
+}
+
 function serversWithStatus() {
-  const openVpn = stubVpnServer(1, "Helsinki OpenVPN", 0);
-  const xray = stubVpnServer(2, "Frankfurt Xray", 1);
   return {
-    vpnServerWithStatuses: [
-      {
-        vpnServerResponses: { vpnServer: openVpn },
-        vpnServerStatusLogResponse: {
-          vpnServerId: 1,
-          sessionId: "mock-session-1",
-          upSince: nowIso(),
-          serverLocalIp: "10.8.0.1",
-          serverRemoteIp: "203.0.113.10",
-          bytesIn: 128_000_000,
-          bytesOut: 64_000_000,
-          version: "2.6.12",
-        },
-        countConnectedClients: 3,
-        countSessions: 11,
-        totalBytesIn: 128_000_000,
-        totalBytesOut: 64_000_000,
-      },
-      {
-        vpnServerResponses: { vpnServer: xray },
-        vpnServerStatusLogResponse: {
-          vpnServerId: 2,
-          sessionId: "mock-session-2",
-          upSince: nowIso(),
-          bytesIn: 32_000_000,
-          bytesOut: 18_000_000,
-          version: "1.8.0",
-        },
-        countConnectedClients: 1,
-        countSessions: 4,
-        totalBytesIn: 32_000_000,
-        totalBytesOut: 18_000_000,
-      },
-    ],
+    vpnServerWithStatuses: mockServerStore.map((row) => ({
+      vpnServerResponses: { vpnServer: vpnServerFromStore(row) },
+      vpnServerStatusLogResponse: row.status,
+      countConnectedClients: row.countConnectedClients,
+      countSessions: row.countSessions,
+      totalBytesIn: row.totalBytesIn,
+      totalBytesOut: row.totalBytesOut,
+    })),
+  };
+}
+
+function completedPostSetup(vpnServerId: number) {
+  return {
+    vpnServerId,
+    operationId: `mock-setup-${vpnServerId}`,
+    state: 2,
+    currentStep: "completed",
+    message: "Mock post-create setup finished.",
   };
 }
 
@@ -190,6 +254,21 @@ function mockPayload(pathname: string, method: string, body: Record<string, unkn
   }
   if (pathname.endsWith("/api/vpn-server-groups/get-all")) {
     return { groups: cloneGroups() };
+  }
+  if (method === "PUT" && pathname.endsWith("/api/vpn-server-groups/reorder")) {
+    const items = Array.isArray(body.items) ? body.items : [];
+    const order = new Map<number, number>();
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const rec = item as { groupId?: unknown; sortOrder?: unknown };
+      const groupId = Number(rec.groupId);
+      const sortOrder = Number(rec.sortOrder);
+      if (Number.isFinite(groupId) && Number.isFinite(sortOrder)) order.set(groupId, sortOrder);
+    }
+    mockGroups = [...mockGroups]
+      .sort((a, b) => (order.get(a.id) ?? a.sortOrder) - (order.get(b.id) ?? b.sortOrder))
+      .map((g) => ({ ...g, sortOrder: order.get(g.id) ?? g.sortOrder }));
+    return {};
   }
   if (method === "POST" && pathname.endsWith("/api/vpn-server-groups/create")) {
     const name = String(body.name ?? "").trim() || "Group";
@@ -239,6 +318,96 @@ function mockPayload(pathname: string, method: string, body: Record<string, unkn
         (row) => row.vpnServerResponses.vpnServer,
       ),
     };
+  }
+
+  if (method === "POST" && pathname.endsWith("/api/open-vpn-servers/add")) {
+    const id = nextMockServerId++;
+    const serverType: 0 | 1 = Number(body.serverType) === 1 ? 1 : 0;
+    const name = String(body.serverName ?? "").trim() || `Server ${id}`;
+    const fields: Record<string, unknown> = {
+      isOnline: Boolean(body.isOnline),
+      isDefault: Boolean(body.isDefault),
+      isDisabled: Boolean(body.isDisabled),
+      apiUrl: body.apiUrl ?? `https://vpn-${id}.mock.local`,
+      latitude: typeof body.latitude === "number" ? body.latitude : null,
+      longitude: typeof body.longitude === "number" ? body.longitude : null,
+      isEnableWss: Boolean(body.isEnableWss),
+      isPiHoleEnabled: Boolean(body.isPiHoleEnabled),
+      tags: [],
+    };
+    mockServerStore.push({
+      id,
+      name,
+      serverType,
+      fields,
+      status: {
+        vpnServerId: id,
+        sessionId: `mock-session-${id}`,
+        upSince: nowIso(),
+        version: "mock",
+      },
+      countConnectedClients: 0,
+      countSessions: 0,
+      totalBytesIn: 0,
+      totalBytesOut: 0,
+    });
+    return { vpnServer: stubVpnServer(id, name, serverType, fields) };
+  }
+
+  if (method === "PUT" && pathname.endsWith("/api/open-vpn-servers/update")) {
+    const id = Number(body.id);
+    const row = findStoredServer(id);
+    if (!row) return { vpnServer: null };
+    if (typeof body.serverName === "string" && body.serverName.trim()) row.name = body.serverName.trim();
+    row.fields = {
+      ...row.fields,
+      isOnline: body.isOnline ?? row.fields.isOnline,
+      isDefault: body.isDefault ?? row.fields.isDefault,
+      isDisabled: body.isDisabled ?? row.fields.isDisabled,
+      apiUrl: body.apiUrl !== undefined ? body.apiUrl : row.fields.apiUrl,
+      latitude: body.latitude !== undefined ? body.latitude : row.fields.latitude,
+      longitude: body.longitude !== undefined ? body.longitude : row.fields.longitude,
+      isEnableWss: body.isEnableWss ?? row.fields.isEnableWss,
+      isPiHoleEnabled: body.isPiHoleEnabled ?? row.fields.isPiHoleEnabled,
+      lastUpdate: nowIso(),
+    };
+    return { vpnServer: vpnServerFromStore(row) };
+  }
+
+  const deleteServer = pathname.match(/\/api\/open-vpn-servers\/delete\/(\d+)$/);
+  if (method === "DELETE" && deleteServer) {
+    const id = Number(deleteServer[1]);
+    mockServerStore = mockServerStore.filter((s) => s.id !== id);
+    removeServerFromAllGroups(id);
+    return {};
+  }
+
+  const postSetupStart = pathname.match(/\/api\/open-vpn-servers\/post-setup\/(\d+)\/start$/);
+  if (method === "POST" && postSetupStart) {
+    return completedPostSetup(Number(postSetupStart[1]));
+  }
+  const postSetupStatus = pathname.match(/\/api\/open-vpn-servers\/post-setup\/(\d+)\/status$/);
+  if (postSetupStatus) {
+    return completedPostSetup(Number(postSetupStatus[1]));
+  }
+
+  if (pathname.endsWith("/api/open-vpn-configs/add-update")) {
+    return {};
+  }
+  const ovpnGet = pathname.match(/\/api\/open-vpn-configs\/get\/(\d+)$/);
+  if (ovpnGet) {
+    return { vpnServerOvpnFileConfig: null };
+  }
+
+  if (pathname.endsWith("/api/tags/get-all")) {
+    return { tags: [] };
+  }
+  if (pathname.includes("/api/quota-plans/get-all") || pathname.endsWith("/api/quota-plans/get-all")) {
+    return { quotaPlans: [] };
+  }
+  const quotaByServer = pathname.match(/\/api\/quota-plan-allowed-servers\/get-by-vpn-server-id\/(\d+)$/);
+  if (quotaByServer) {
+    return { items: [] };
   }
 
   const getById = pathname.match(/\/api\/open-vpn-servers\/get\/(\d+)$/);
