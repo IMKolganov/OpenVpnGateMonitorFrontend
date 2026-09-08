@@ -55,7 +55,7 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => {
     border: "none",
     "& .MuiDataGrid-columnHeaders": {
       backgroundColor: headerBg,
-      fontSize: "14px",
+      fontSize: "var(--font-size-base)",
       fontWeight: "bold",
       borderBottom: `1px solid ${borderColor}`,
     },

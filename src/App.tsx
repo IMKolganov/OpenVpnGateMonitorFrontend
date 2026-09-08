@@ -65,7 +65,6 @@ const AdminSecuritySettings = lazy(() => import("./pages/AdminSecuritySettings")
 const QuotaPlansSettings = lazy(() => import("./pages/QuotaPlansSettings/QuotaPlansSettings"));
 const NotificationsPage = lazy(() => import("./pages/Notifications/NotificationsPage"));
 const ServersOverview = lazy(() => import("./pages/ServersOverview"));
-const GroupDetails = lazy(() => import("./pages/GroupDetails"));
 const OvpnFileConfigForm = lazy(() => import("./pages/OvpnFileConfigForm"));
 const StatusStreamLogs = lazy(() => import("./pages/StatusStreamLogs"));
 const XrayLoginPage = lazy(() => import("./pages/xray/XrayLoginPage.tsx"));
@@ -168,7 +167,7 @@ function App() {
                       <Route index element={withSuspense(<ServersOverview />)} />
                       <Route path="status-stream-logs" element={withSuspense(<StatusStreamLogs />)} />
                       <Route path="statistics/:externalId" element={withSuspense(<ServersOverview />)} />
-                      <Route path="groups/:groupId" element={withSuspense(<GroupDetails />)} />
+                      <Route path="groups/:groupId" element={<Navigate to="/servers" replace />} />
 
                       <Route path=":vpnServerId" element={withSuspense(<ServerDetails />)}>
                         <Route index element={withSuspense(<GeneralTab />)} />

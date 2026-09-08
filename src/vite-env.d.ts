@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_SIGNALR_ORIGIN?: string;
   /** Dev: "1" = only Long Polling (if API allows); skip WebSocket first. */
   readonly VITE_SIGNALR_LONG_POLLING_ONLY?: string;
+  /** Dev: "1" = serve UI against local stubs, no backend. */
+  readonly VITE_MOCK_API?: string;
 }
 
 declare const __APP_VERSION__: string;

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Outlet, useLocation, useMatch } from "react-router-dom";
+import { FaChevronRight } from "react-icons/fa";
 import ServerList from "../components/servers/ServerList.tsx";
 import { useMediaQuery } from "react-responsive";
 import "../css/ServersWithDetails.css";
@@ -123,16 +124,24 @@ function ServersWithDetails() {
       <div
         className={`servers-with-details-container${isMobile ? " servers-with-details-container--mobile" : ""}`}
       >
-        {!isMobile && (
+        {!isMobile && collapsed && (
           <div className="server-list-panel toggle-panel">
-            <button type="button" className="btn secondary" onClick={() => setCollapsed(!collapsed)}>
-              {collapsed ? "➡" : "⬅"}
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => setCollapsed(false)}
+              title="Show server list"
+              aria-label="Show server list"
+            >
+              <FaChevronRight className="icon" />
             </button>
           </div>
         )}
 
         <div className={`server-list-panel ${collapsed && !isMobile ? "collapsed" : ""}`}>
-          {(!collapsed || isMobile) && <ServerList />}
+          {(!collapsed || isMobile) && (
+            <ServerList onHideList={isMobile ? undefined : () => setCollapsed(true)} />
+          )}
         </div>
 
         {!isMobile && (

@@ -8,15 +8,17 @@
 
 .btn {
   padding: 8px 8px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
+  line-height: 1;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  box-sizing: border-box;
 }
 
 a.btn {
@@ -36,6 +38,8 @@ a.btn:hover {
 .icon {
   width: 16px;
   height: 16px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .icon-spin {
@@ -144,7 +148,7 @@ a.btn:hover {
 .input-number {
   width: 100px;
   padding: 4px 6px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: #f0f6fc;
   background-color: var(--input-bg);
@@ -209,7 +213,7 @@ a.btn:hover {
 }
 
 .header-bar .btn {
-  font-size: var(--font-size-ui);
+  font-size: var(--font-size-base);
 }
 
 @media (max-width: 768px) {

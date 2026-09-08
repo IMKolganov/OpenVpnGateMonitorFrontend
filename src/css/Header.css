@@ -1,15 +1,14 @@
-  /* Header.css */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--bg-header);
-  padding: 12px 24px;
+  padding: 10px 20px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid var(--border-color);
   position: relative;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: var(--font-size-base);
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -17,8 +16,9 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  font-weight: bold;
-  font-size: 1.0em;
+  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-tight);
   cursor: pointer;
   color: var(--text-primary);
   text-decoration: none;
@@ -32,9 +32,10 @@
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
-  margin-right: 8px;
+  width: 44px;
+  height: 44px;
+  margin-right: 10px;
+  object-fit: contain;
 }
 .logo-icon-login {
   width: 200px;
@@ -46,7 +47,7 @@
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   transition: transform 0.3s ease-in-out;
@@ -56,11 +57,21 @@
   text-decoration: none;
   color: var(--text-secondary);
   font-weight: 500;
-  font-size: var(--font-size-ui);
-  padding: 8px 14px;
-  border-radius: 6px;
+  font-size: var(--font-size-base);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
   transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-links a .icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .nav-links a:hover {
@@ -80,18 +91,33 @@
   gap: 4px;
 }
 
-.header nav .btn.secondary {
-  font-size: var(--font-size-ui);
+.header nav .header-icon-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  line-height: 0;
+}
+
+.header nav .header-icon-btn .icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.header nav .header-icon-btn .header-btn-label {
+  display: none;
 }
 
 .nav-links li.user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nav-links li.user-info .user-name {
-  font-size: var(--font-size-ui);
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-secondary);
   max-width: 200px;
@@ -102,7 +128,7 @@
 
 .nav-links li.separator {
   color: var(--text-muted);
-  font-size: var(--font-size-ui);
+  font-size: var(--font-size-base);
   user-select: none;
 }
 
@@ -113,7 +139,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   line-height: 18px;
   text-align: center;
@@ -127,13 +153,17 @@
   flex-direction: column;
   cursor: pointer;
   flex-shrink: 0;
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 4px;
 }
 
 .burger-menu div {
-  width: 30px;
-  height: 3px;
+  width: 22px;
+  height: 2px;
   background: var(--text-secondary);
-  margin: 5px;
+  margin: 4px;
   transition: all 0.3s ease-in-out;
 }
 
@@ -143,23 +173,21 @@
  */
 @media (max-width: 1280px) and (min-width: 851px) {
   .header {
-    font-size: 20px;
-    padding: 10px 16px;
+    padding: 8px 14px;
   }
 
   .logo-icon {
-    width: 36px;
-    height: 36px;
-    margin-right: 6px;
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
   }
 
   .nav-links {
-    gap: 6px;
+    gap: 2px;
   }
 
   .nav-links a {
-    padding: 6px 10px;
-    font-size: var(--font-size-ui);
+    padding: 6px 8px;
   }
 
   .nav-links li.user-info .user-name,
@@ -167,23 +195,12 @@
     display: none;
   }
 
-  .header nav .btn.secondary {
-    font-size: 0;
-    padding: 8px 10px;
-  }
-
-  .header nav .btn.secondary .icon {
-    font-size: 16px;
-  }
 }
 
 @media (max-width: 1024px) and (min-width: 851px) {
-  .logo {
-    font-size: 0;
-  }
-
   .logo-icon {
-    margin-right: 0;
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -197,6 +214,13 @@
     z-index: 1100;
   }
 
+  .header nav {
+    flex: 0 0 0;
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+  }
+
   .nav-links {
     position: absolute;
     top: 100%;
@@ -205,7 +229,7 @@
     background: var(--bg-content);
     flex-direction: column;
     align-items: center;
-    padding: 20px 0;
+    padding: 16px 0;
     transform: translateY(-100%);
     opacity: 0;
     visibility: hidden;
@@ -221,17 +245,20 @@
     display: block;
   }
 
-  .header nav .btn.secondary {
-    font-size: var(--font-size-ui);
-    padding: 8px 14px;
+  .header nav .header-icon-btn {
+    width: auto;
+    min-width: 0;
+    padding: 0 12px;
+    gap: 6px;
+    line-height: 1;
   }
 
-  .header nav .btn.secondary .icon {
-    font-size: inherit;
+  .header nav .header-icon-btn .header-btn-label {
+    display: inline;
   }
 
   .logo {
-    font-size: 1em;
+    font-size: var(--font-size-2xl);
   }
 
   .burger-menu {

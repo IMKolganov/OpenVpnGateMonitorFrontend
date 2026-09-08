@@ -1,0 +1,92 @@
+/*
+ * Design tokens — single source of truth for color, type, and radii.
+ *
+ * Architecture:
+ *   1. tokens.css  — CSS variables (this file)
+ *   2. base.css    — html/body/headings using tokens
+ *   3. ui-patterns / buttons / input / tab — shared components
+ *   4. per-page CSS — layout only; font-size must use tokens below
+ *
+ * Do not put --text-* color names in Tailwind @theme: that namespace is font-size.
+ * Do not put --font-size-* in @theme: --font-* is font-family there.
+ */
+
+:root {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Two UI sizes + one title size. Extra aliases collapse so type does not jump 10/11/13/14/16/18/20. */
+  --font-size-2xs: 12px;
+  --font-size-xs: 12px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+
+  /* Back-compat aliases used by older CSS */
+  --font-size-ui: var(--font-size-base);
+  --font-size-ui-sm: var(--font-size-md);
+
+  --line-height-tight: 1.25;
+  --line-height-body: 1.45;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+:root,
+[data-theme="dark"] {
+  --bg-body: #0d1117;
+  --bg-content: #161b22;
+  --bg-content-alt: #21262d;
+  --bg-header: #161b22;
+  --bg-header-bar: #161b22;
+  --bg-card: #161b22;
+  --text-primary: #f0f6fc;
+  --text-secondary: #c9d1d9;
+  --text-muted: #8b949e;
+  --border-color: #30363d;
+  --input-bg: #0d1117;
+  --input-text: #f0f6fc;
+  --input-focus-border: #c1bfbf;
+  --input-focus-ring: rgba(255, 255, 255, 0.4);
+  --color-focus: #c9d1d9;
+  --color-spinner: #8b949e;
+  --color-spinner-track: #30363d;
+  --border-color-selected: #6e7681;
+  --btn-secondary-bg: #21262d;
+  --btn-secondary-hover: #30363d;
+  --btn-secondary-text: #c9d1d9;
+  --link-color: #58a6ff;
+  --skeleton-shine: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] {
+  --bg-body: #f6f8fa;
+  --bg-content: #ffffff;
+  --bg-content-alt: #eaeef2;
+  --bg-header: #ffffff;
+  --bg-header-bar: #f6f8fa;
+  --bg-card: #ffffff;
+  --text-primary: #1f2328;
+  --text-secondary: #424a53;
+  --text-muted: #656d76;
+  --border-color: #d0d7de;
+  --input-bg: #ffffff;
+  --input-text: #1f2328;
+  --input-focus-border: #0969da;
+  --input-focus-ring: rgba(9, 105, 218, 0.25);
+  --color-focus: #0969da;
+  --color-spinner: #656d76;
+  --color-spinner-track: #d0d7de;
+  --border-color-selected: #424a53;
+  --btn-secondary-bg: #eaeef2;
+  --btn-secondary-hover: #d0d7de;
+  --btn-secondary-text: #1f2328;
+  --link-color: #0969da;
+  --skeleton-shine: rgba(0, 0, 0, 0.06);
+}

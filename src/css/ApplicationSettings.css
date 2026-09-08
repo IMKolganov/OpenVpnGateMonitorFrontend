@@ -26,7 +26,7 @@
     border-radius: 6px;
     background: var(--bg-body);
     color: #f0f6fc;
-    font-size: 14px;
+    font-size: var(--font-size-base);
   }
 
   .app-register input:focus {
@@ -53,7 +53,7 @@
   }
   
   .small-text {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     word-break: break-word;
   }
   
@@ -65,7 +65,7 @@
 
   .copied-text {
     color: var(--link-color);
-    font-size: 12px;
+    font-size: var(--font-size-sm);
   }
   
   .status {
@@ -92,7 +92,7 @@
   .api-client-created-modal__intro {
     margin: 0 0 16px;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: var(--font-size-base);
     line-height: 1.5;
   }
 
@@ -103,7 +103,7 @@
   .api-client-created-modal__label {
     display: block;
     margin-bottom: 6px;
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -120,7 +120,7 @@
     flex: 1;
     min-width: 0;
     word-break: break-all;
-    font-size: 13px;
+    font-size: var(--font-size-md);
     padding: 8px 10px;
     border-radius: 6px;
     background: var(--bg-body);
@@ -140,7 +140,7 @@
   
   .app-settings-description {
     color: #8b949e;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     text-align: center;
     margin-bottom: 15px;
   }
@@ -155,7 +155,7 @@
     color: var(--text-secondary);
     padding: 10px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     white-space: pre-wrap;
     word-wrap: break-word;
     border: 1px solid var(--border-color);

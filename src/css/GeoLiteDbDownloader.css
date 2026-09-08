@@ -8,7 +8,7 @@
 }
 
 .geo-db-downloader__title {
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   margin-bottom: 0.75rem;
   margin-top: 0;
@@ -16,7 +16,7 @@
 }
 
 .geo-db-downloader__version-line {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--text-secondary);
   margin: 0;
 }
@@ -35,7 +35,7 @@
 }
 
 .geo-db-downloader__step-caption {
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   margin-bottom: 0.5rem;
   color: var(--text-secondary);
 }

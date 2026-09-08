@@ -6,6 +6,7 @@ import { ACCESS_TOKEN_KEY } from "../utils/const";
 import { errorMessage } from "../utils/errorMessage";
 import { getProxyTrafficFlowHubUrl } from "../utils/signalrHubUrl";
 import { getSignalRPreferredTransport } from "../utils/signalrTransport";
+import { isMockApiEnabled } from "../mocks/isMockApi";
 
 export type ProxyTrafficFlowState = "connected" | "disconnected" | "failed";
 export type ProxyTrafficFlowProtocol = "tcp" | "udp" | "unknown";
@@ -184,7 +185,7 @@ export function useProxyTrafficFlow(enabled: boolean, serverId?: number | null) 
     return () => window.removeEventListener(ACCESS_TOKEN_REFRESHED_EVENT, bump);
   }, []);
 
-  if (!enabled) {
+  if (!enabled || isMockApiEnabled()) {
     if (
       connectionState !== "disabled" ||
       lastError !== null ||
@@ -197,7 +198,7 @@ export function useProxyTrafficFlow(enabled: boolean, serverId?: number | null) 
   }
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || isMockApiEnabled()) {
       const current = connRef.current;
       connRef.current = null;
       if (current) void current.stop();
@@ -364,7 +365,7 @@ export function useProxyTrafficFlowMany(enabled: boolean, serverIds: number[]) {
     return () => window.removeEventListener(ACCESS_TOKEN_REFRESHED_EVENT, bump);
   }, []);
 
-  const hubDisabled = !enabled || stableServerIds.length === 0;
+  const hubDisabled = !enabled || stableServerIds.length === 0 || isMockApiEnabled();
   if (hubDisabled) {
     if (
       connectionState !== "disabled" ||
